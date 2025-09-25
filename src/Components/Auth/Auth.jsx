@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { authToken } from "../Library/Authenticate";
+import { authToken } from "../../Library/Authenticate";
 
 function Auth() {
   const [loading, setLoading] = useState(true);
