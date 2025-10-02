@@ -12,11 +12,11 @@ function Navbar() {
         <Link to="/home" className="hover:text-gray-300">
           Home
         </Link>
-        <Link to="/payments" className="hover:text-gray-300">
-          Payments
+        <Link to="/tuition-payments" className="hover:text-gray-300">
+          Tuition Payments
         </Link>
-        <Link to="/roles" className="hover:text-gray-300">
-          Roles
+        <Link to="/configuration" className="hover:text-gray-300">
+          Configuration
         </Link>
         <Link to="/help" className="hover:text-gray-300">
           Help
