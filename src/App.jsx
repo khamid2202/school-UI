@@ -16,10 +16,8 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Public routes (no layout) */}
         <Route path="/" element={<Auth />} />
         <Route path="/login" element={<Login />} />
-
         {/* Protected routes (with layout) */}
         <Route element={<LayoutWithHeader />}>
           <Route path="/home" element={<LandingPage />} />
@@ -35,3 +33,7 @@ function App() {
 }
 
 export default App;
+
+// # 1. Token Authentication
+// if token is valid, redirect to /home
+// if token is invalid, redirect to /login

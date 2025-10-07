@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { login } from "../../Library/Authenticate";
-import { makePostRequest } from "../../Library/RequestMaker";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -33,8 +32,15 @@ const Login = () => {
     await login({
       username: username.trim().toLowerCase(),
       password,
-      onSuccess: () => navigate("/home"),
-      onFail: (message) => setError(message),
+      onSuccess: () => {
+        console.log("Login successful");
+        navigate("/home");
+      },
+
+      onFail: (message) => {
+        console.log("Login failed:", message);
+        setError(message || "Login failed. Please try again.");
+      },
     });
     setLoading(false);
   };

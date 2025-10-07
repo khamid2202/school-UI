@@ -8,18 +8,20 @@ function Auth() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    authToken({
-      onSuccess: () => {
-        navigate("/home");
-      },
-      onFail: () => {
-        navigate("/login");
-      },
-      onConnectionError: () => {
-        setError("No connection to server");
-      },
-    });
-    setLoading(false);
+    const authenticate = async () => {
+      await authToken({
+        onSuccess: () => {
+          console.log("User is authenticated");
+          navigate("/home");
+        },
+        onFail: () => {
+          navigate("/login");
+        },
+      });
+      setLoading(false);
+    };
+
+    authenticate();
   }, [navigate]);
 
   if (loading) return <div>Authenticating...</div>;

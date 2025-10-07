@@ -1,42 +1,47 @@
-import { makePostRequest, makeGetRequest } from "./RequestMaker.jsx";
+import { api } from "./RequestMaker.jsx";
 import { endpoints } from "./Endpoints";
 
-//fetch the user from the backend and store it in local storage
-export const fetchUser = async () => {
-  const result = await makeGetRequest(endpoints.USER);
-  if (result.error) {
-    console.log("Error fetching user:", result.error);
-    return null;
-  } else {
-    localStorage.setItem("userr", JSON.stringify(result));
-    return result;
-  }
-};
-
 export const login = async ({ username, password, onSuccess, onFail }) => {
-  const result = await makePostRequest(endpoints.SIGN_IN, {
-    username,
-    password,
-  });
-  if (result.error) {
-    onFail(result.error);
-  } else {
-    onSuccess();
-    fetchUser();
-    console.log("Login successful");
+  try {
+    const result = await api.post(endpoints.SIGN_IN, {
+      username,
+      password,
+    });
+    console.log("Login successfull", result);
+    if (result.error) {
+      console.log("Login error:", result.error);
+      onFail(result.error);
+    } else {
+      onSuccess();
+    }
+  } catch (error) {
+    console.log("Login error:", error);
+    onFail(error?.response?.data?.message || error?.message || "Login failed");
   }
 };
 
-export const authToken = async ({ onSuccess, onFail, onConnectionError }) => {
+export const authToken = async ({ onSuccess, onFail }) => {
   try {
-    const result = await makeGetRequest(endpoints.VALIDATE);
-    if (result.ok) {
-      const { user } = result;
+    const res = await api.get(endpoints.VALIDATE);
+    if (res.data?.ok) {
       onSuccess();
     } else {
       onFail();
     }
-  } catch (error) {
-    onConnectionError();
+  } catch (err) {
+    onFail();
+  }
+};
+
+export const sendLogoutRequest = async ({ onSuccess, onFail }) => {
+  try {
+    const res = await api.post(endpoints.REVOKE, {}, { withCredentials: true });
+    if (res.data?.ok) {
+      onSuccess();
+    } else {
+      onFail(res.error || "Logout failed");
+    }
+  } catch (err) {
+    onFail(err?.response?.data?.message || err?.message || "Logout failed");
   }
 };

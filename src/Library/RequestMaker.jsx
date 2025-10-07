@@ -1,101 +1,31 @@
 import axios from "axios";
-axios.defaults.withCredentials = true;
 
-export const makeGetRequest = async (url, options = {}) => {
-  try {
-    const response = await axios.get(url, {
-      withCredentials: true,
-      ...options,
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Get Request Error", error);
-    return { error: error.message };
-  }
-};
+const baseUrl = import.meta.env?.VITE_API_BASE_URL || "http://localhost:3000";
 
-export const makeGetRequest2 = async (url) => {
-  try {
-    const response = await fetch(url, {
-      method: "GET",
-      mode: "cors",
-      credentials: "include",
-    });
-    return response;
-  } catch (error) {
-    console.log("Get Request Error", error);
-    return { error };
-  }
-};
+const requestMaker = axios.create({
+  baseURL: baseUrl,
+  withCredentials: true,
+});
 
-export const makePostRequest = async (url, payload) => {
-  try {
-    const response = await axios.post(url, payload, {
-      headers: {
-        "Content-Type": "application/json",
-      },
-      withCredentials: true, // <-- IMPORTANT for cookie auth
-    });
-    return response.data || null;
-  } catch (error) {
-    console.log("Post Request Error", error);
-    return { error: error.message };
-  }
-};
+// Helper to merge optional headers / config
+const withConfig = (config = {}) => ({
+  ...config,
+  headers: {
+    "Content-Type": "application/json",
+    ...(config.headers || {}),
+  },
+});
 
-export const makePatchRequest = async (url, data) => {
-  try {
-    const response = await fetch(url, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-      mode: "cors",
-      credentials: "include",
-    });
-    const responseData = await response.json();
-    if (!response.ok) {
-      return { error: responseData, status: response.status };
-    }
-    return responseData;
-  } catch (error) {
-    console.log("Patch Request Error", error);
-    return { error };
-  }
-};
+export const api = {
+  get: (url, params, config) =>
+    requestMaker.get(url, { params, ...withConfig(config) }),
 
-export const makePutRequest = async (url, data, token) => {
-  try {
-    const response = await fetch(url, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(data),
-      mode: "cors",
-      credentials: "include",
-    });
-    return response;
-  } catch (error) {
-    console.log("Put Request Error", error);
-    return { error };
-  }
-};
+  post: (url, data, config) => requestMaker.post(url, data, withConfig(config)),
 
-export const makeDeleteRequest = async (url, data) => {
-  try {
-    const response = await axios.delete(url, {
-      data,
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-    const responseData = response.data || null;
-    return responseData;
-  } catch (error) {
-    console.log("Delete Request Error", error);
-    return { error };
-  }
+  put: (url, data, config) => requestMaker.put(url, data, withConfig(config)),
+
+  patch: (url, data, config) =>
+    requestMaker.patch(url, data, withConfig(config)),
+
+  delete: (url, config) => requestMaker.delete(url, withConfig(config)),
 };

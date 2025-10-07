@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import React, { useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Home,
   BookOpen,
@@ -7,161 +7,171 @@ import {
   Users,
   BarChart2,
   Settings,
+  ChevronLeft,
   ChevronRight,
+  LogOut,
 } from "lucide-react";
+import { sendLogoutRequest } from "../../Library/Authenticate.jsx";
 
-function Navbar({ isOpen, setIsOpen }) {
+function Navbar({ isExpanded, setIsExpanded }) {
   const location = useLocation();
+  const [showModal, setShowModal] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+
   const isActive = (path) => location.pathname === path;
 
-  // Track mouse near left edge
-  const [showButton, setShowButton] = useState(false);
+  const user = JSON.parse(localStorage.getItem("user")).user || "{}";
+  const firstLetter =
+    user.username && typeof user.username === "string"
+      ? user.username.charAt(0).toUpperCase()
+      : "U";
 
-  useEffect(() => {
-    const handleEsc = (e) => {
-      if (e.key === "Escape") setIsOpen(false);
-    };
-    window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
-  }, [setIsOpen]);
+  const navItems = [
+    { to: "/home", icon: <Home size={20} />, label: "Home" },
+    { to: "/classes", icon: <BookOpen size={20} />, label: "Classes" },
+    {
+      to: "/tuition-payments",
+      icon: <CreditCard size={20} />,
+      label: "Payment",
+    },
+    { to: "/teachers", icon: <Users size={20} />, label: "Tutors" },
+    { to: "/scores", icon: <BarChart2 size={20} />, label: "Scoring" },
+  ];
+
+  const handleLogOut = () => {
+    setShowModal(true);
+    setShowSettings(false);
+  };
+
+  const confirmLogout = () => {
+    setShowModal(false);
+    localStorage.clear();
+    sendLogoutRequest({
+      onSuccess: () => {
+        window.location.href = "/login";
+      },
+      onFail: (error) => {
+        console.error("Logout failed:", error);
+      },
+    });
+  };
+
+  const cancelLogout = () => {
+    setShowModal(false);
+  };
 
   return (
     <>
-      {/* Invisible hotspot on the left edge */}
-      {!isOpen && (
-        <div
-          className="fixed left-0 top-0 h-full w-4 z-50"
-          onMouseEnter={() => setShowButton(true)}
-          onMouseLeave={() => setShowButton(false)}
-        >
-          {/* Open Button */}
-          {showButton && (
-            <button
-              className="absolute left-0 top-1/2 -translate-y-1/2 bg-indigo-500 text-white rounded-r-xl px-2 py-3 shadow-lg opacity-80 hover:opacity-100 transition"
-              aria-label="Open sidebar"
-              onClick={() => setIsOpen(true)}
-            >
-              <ChevronRight size={24} />
-            </button>
-          )}
-        </div>
-      )}
-      {/* Backdrop */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-black opacity-50 z-30"
-          onClick={() => setIsOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
       <nav
-        className={`flex flex-col justify-between bg-white border-r border-gray-200 w-64 h-screen shadow-md fixed left-0 top-0 z-40 transition-transform duration-300 ${
-          isOpen ? "translate-x-0" : "-translate-x-full"
+        className={`flex flex-col justify-between bg-white border-r border-gray-200 h-screen shadow-md fixed left-0 top-0 z-40 transition-all duration-300 ${
+          isExpanded ? "w-64" : "w-20"
         }`}
       >
         {/* Top Section */}
         <div>
-          {/* Logo */}
+          {/* Logo Section */}
           <div className="flex items-center gap-3 px-5 py-6 border-b">
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold">
-              LA
+              {firstLetter}
             </div>
-            <div>
-              <h1 className="font-semibold text-gray-800">LangApex</h1>
-              <p className="text-sm text-gray-500">Admin Panel</p>
-            </div>
+            {isExpanded && (
+              <div>
+                <h1 className="font-semibold text-gray-800">
+                  {user.full_name || "User"}
+                </h1>
+                <p className="text-sm text-gray-500">
+                  {user.username || "Admin Panel"}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Nav Links */}
-          <div className="flex flex-col mt-4">
-            <Link
-              to="/home"
-              className={`flex items-center gap-3 px-5 py-3 mx-3 mb-2 rounded-xl text-sm font-medium transition-all ${
-                isActive("/home")
-                  ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-md"
-                  : "text-gray-600 hover:bg-gray-100 hover:text-indigo-600"
-              }`}
-              onClick={() => setIsOpen(false)}
-            >
-              <Home size={18} />
-              Home
-            </Link>
-            <Link
-              to="/classes"
-              className={`flex items-center gap-3 px-5 py-3 mx-3 mb-2 rounded-xl text-sm font-medium transition-all ${
-                isActive("/classes")
-                  ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-md"
-                  : "text-gray-600 hover:bg-gray-100 hover:text-indigo-600"
-              }`}
-              onClick={() => setIsOpen(false)}
-            >
-              <BookOpen size={18} />
-              Classes
-            </Link>
-            <Link
-              to="/tuition-payments"
-              className={`flex items-center gap-3 px-5 py-3 mx-3 mb-2 rounded-xl text-sm font-medium transition-all ${
-                isActive("/tuition-payments")
-                  ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-md"
-                  : "text-gray-600 hover:bg-gray-100 hover:text-indigo-600"
-              }`}
-              onClick={() => setIsOpen(false)}
-            >
-              <CreditCard size={18} />
-              Payment
-            </Link>
-            <Link
-              to="/teachers"
-              className={`flex items-center gap-3 px-5 py-3 mx-3 mb-2 rounded-xl text-sm font-medium transition-all ${
-                isActive("/teachers")
-                  ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-md"
-                  : "text-gray-600 hover:bg-gray-100 hover:text-indigo-600"
-              }`}
-              onClick={() => setIsOpen(false)}
-            >
-              <Users size={18} />
-              Tutors
-            </Link>
-            <Link
-              to="/scores"
-              className={`flex items-center gap-3 px-5 py-3 mx-3 mb-2 rounded-xl text-sm font-medium transition-all ${
-                isActive("/scores")
-                  ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-md"
-                  : "text-gray-600 hover:bg-gray-100 hover:text-indigo-600"
-              }`}
-              onClick={() => setIsOpen(false)}
-            >
-              <BarChart2 size={18} />
-              Scoring
-            </Link>
-            <Link
-              to="/configuration"
-              className={`flex items-center gap-3 px-5 py-3 mx-3 mb-2 rounded-xl text-sm font-medium transition-all ${
-                isActive("/configuration")
-                  ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-md"
-                  : "text-gray-600 hover:bg-gray-100 hover:text-indigo-600"
-              }`}
-              onClick={() => setIsOpen(false)}
-            >
-              <Settings size={18} />
-              Configuration
-            </Link>
+          <div className="flex flex-col mt-4 space-y-1">
+            {navItems.map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                className={`flex items-center gap-3 px-5 py-3 mx-3 rounded-xl text-sm font-medium transition-all ${
+                  isActive(item.to)
+                    ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-md"
+                    : "text-gray-600 hover:bg-gray-100 hover:text-indigo-600"
+                }`}
+              >
+                {item.icon}
+                {isExpanded && <span>{item.label}</span>}
+              </Link>
+            ))}
           </div>
         </div>
 
-        {/* Bottom Log Out */}
-        <div className="p-4 border-t">
+        {/* Bottom Section */}
+        <div className="p-4 border-t flex justify-between items-center relative">
+          {/* Settings Button */}
           <button
-            className="w-full px-3 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-semibold hover:from-indigo-600 hover:to-purple-600 transition"
-            onClick={() => {
-              window.location.href = "/login";
-            }}
+            className="w-full px-3 py-2 rounded-xl bg-gradient-to-r from-gray-200 to-gray-300 text-gray-700 font-semibold hover:from-gray-300 hover:to-gray-400 transition flex items-center justify-center"
+            onClick={() => setShowSettings((prev) => !prev)}
           >
-            Log Out
+            <Settings size={18} className="mr-2" />
+            {isExpanded && "Settings"}
           </button>
+
+          {/* Collapse / Expand Button */}
+          <button
+            className="absolute -right-3 bottom-6 bg-white border border-gray-300 rounded-full p-1 shadow-md hover:bg-gray-100 transition"
+            onClick={() => setIsExpanded((prev) => !prev)}
+          >
+            {isExpanded ? (
+              <ChevronLeft className="text-gray-600" size={20} />
+            ) : (
+              <ChevronRight className="text-gray-600" size={20} />
+            )}
+          </button>
+
+          {/* Settings Dropdown */}
+          {showSettings && (
+            <div
+              className={`absolute left-0 bottom-16 w-full bg-white border border-gray-200 rounded-xl shadow-lg py-2 z-50 flex flex-col items-center`}
+            >
+              <button
+                className="w-11/12 flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 transition text-gray-700"
+                onClick={handleLogOut}
+              >
+                <LogOut size={18} />
+                {isExpanded && "Log Out"}
+              </button>
+            </div>
+          )}
         </div>
       </nav>
+
+      {/* Logout Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
+          <div className="bg-white rounded-xl shadow-lg p-8 min-w-[300px] flex flex-col items-center">
+            <h2 className="text-lg font-bold mb-4 text-gray-800">
+              Confirm Logout
+            </h2>
+            <p className="mb-6 text-gray-600">
+              Are you sure you want to log out?
+            </p>
+            <div className="flex gap-4">
+              <button
+                className="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition"
+                onClick={confirmLogout}
+              >
+                Yes, Log Out
+              </button>
+              <button
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+                onClick={cancelLogout}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

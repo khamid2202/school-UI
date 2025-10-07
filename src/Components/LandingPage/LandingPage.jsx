@@ -1,10 +1,26 @@
-import React from "react";
-import Navbar from "../Layout/Navbar";
-import { endpoints } from "../../Library/Endpoints";
+import React, { useEffect } from "react";
+import { api } from "../../Library/RequestMaker.jsx";
+import { endpoints } from "../../Library/Endpoints.jsx";
 
-//fetch userinfo from database and save it to the local storage
-
+// Fetch the user from the backend and store it in localStorage when LandingPage mounts
 function LandingPage() {
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const result = await api.get(endpoints.USER, { withCredentials: true });
+        if (result.data) {
+          localStorage.setItem("user", JSON.stringify(result.data));
+          console.log("Fetched user:", result.data);
+        } else {
+          console.log("Error fetching user:", result.error || "No data");
+        }
+      } catch (error) {
+        console.log("Error fetching user:", error);
+      }
+    };
+    fetchUser();
+  }, []);
+
   return (
     <div className="min-h-screen flex flex-col">
       <div className="flex-1 p-6">
