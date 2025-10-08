@@ -11,7 +11,7 @@ import {
   ChevronRight,
   LogOut,
 } from "lucide-react";
-import { sendLogoutRequest } from "../../Library/Authenticate.jsx";
+import { sendLogoutRequest } from "../Library/Authenticate";
 
 function Navbar({ isExpanded, setIsExpanded }) {
   const location = useLocation();

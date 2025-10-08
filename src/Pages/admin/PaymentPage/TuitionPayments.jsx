@@ -1,6 +1,6 @@
 // src/Components/PaymentPage/Payments.jsx
 import React, { useState } from "react";
-import Navbar from "../Layout/Navbar";
+import Navbar from "../../../Layouts/Navbar";
 import data from "./dummyData.json";
 
 const BASE_TUITION = 2600;

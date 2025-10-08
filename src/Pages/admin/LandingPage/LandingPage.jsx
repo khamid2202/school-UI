@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
-import { api } from "../../Library/RequestMaker.jsx";
-import { endpoints } from "../../Library/Endpoints.jsx";
+import { api } from "../../../Library/RequestMaker.jsx";
+import { endpoints } from "../../../Library/Endpoints.jsx";
 
 // Fetch the user from the backend and store it in localStorage when LandingPage mounts
 function LandingPage() {

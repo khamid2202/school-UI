@@ -1,14 +1,14 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Auth from "./Components/Auth/Auth";
-import Login from "./Components/Login/Login";
-import Dashboard from "./Components/Dashboard/Dashboard";
-import LandingPage from "./Components/LandingPage/LandingPage";
-import LayoutWithHeader from "./Components/Layout/Layout";
-import Payments from "./Components/PaymentPage/TuitionPayments";
-import Configuration from "./Components/StudentSetting/Configuration";
-import Classes from "./Components/Groups/Classes";
-import Teachers from "./Components/Teachers/Teachers";
-import Scores from "./Components/Scoring/Scoring";
+import Auth from "./Pages/auth/Auth";
+import Login from "./Pages/auth/Login/Login";
+import Dashboard from "./Pages/admin/Dashboard/Dashboard";
+import LandingPage from "./Pages/admin/LandingPage/LandingPage";
+import LayoutWithHeader from "./Layouts/Layout";
+import Payments from "./Pages/admin/PaymentPage/TuitionPayments";
+import Configuration from "./Pages/admin/StudentSetting/Configuration";
+import Classes from "./Pages/admin/Groups/Classes";
+import Teachers from "./Pages/admin/Teachers/Teachers";
+import Scores from "./Pages/admin/Scoring/Scoring";
 
 // import "./index.css";
 
