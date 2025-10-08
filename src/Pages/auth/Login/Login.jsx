@@ -50,7 +50,7 @@ const Login = () => {
   return (
     <div className="md:flex md:flex-row">
       <div className="md:w-1/2  md:block">
-        <div className="md:flex md:items-center md:justify-center md:min-h-screen md:bg-[#287eee]">
+        <div className="md:flex hidden  md:items-center md:justify-center md:min-h-screen">
           <img
             src="../../../public/images/login_page.jpeg" className="md:h-full  md:w-full md:object-cover"/>
         </div>
