@@ -48,21 +48,21 @@ const Login = () => {
   //after logging in get the user from the backend and store it in local storage
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="w-full max-w-md bg-white p-8 rounded-xl shadow-lg">
+    <div className="flex items-center justify-center min-h-screen bg-[#eff6ff]">
+      <div className="w-[85%] max-w-md bg-white p-1 rounded-2xl shadow-2xl">
         {/* Logo */}
-        <div className="flex justify-center mb-6">
+        <div className="flex justify-center p-8 mb-6">
           <img
             src="../../../public/images/2.png"
             alt="Logo"
-            className="w-40 h-40" // 👈 smaller logo
+            className="w-32 h-28" // 👈 smaller logo
             draggable="false"
           />
         </div>
 
         {/* Form */}
-        <form onSubmit={handleLogin} className="space-y-5">
-          <div>
+        <form onSubmit={handleLogin} className="space-y-5 p-5">
+          <div className="px-4">
             <label
               htmlFor="username"
               className="block text-sm font-medium text-gray-700 mb-2"
@@ -82,12 +82,12 @@ const Login = () => {
                   passwordRef.current.focus();
                 }
               }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-gray-500"
               placeholder="Enter your username"
             />
           </div>
 
-          <div>
+          <div className="px-4">
             <label
               htmlFor="password"
               className="block text-sm font-medium text-gray-700 mb-2"
@@ -101,16 +101,17 @@ const Login = () => {
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-gray-500"
               placeholder="Enter your password"
             />
           </div>
 
           {error && <p className="text-red-500 text-sm">{error}</p>}
 
+          <div className="px-4">
           <button
             type="submit"
-            className="w-full bg-black text-white font-semibold py-2.5 rounded-lg hover:bg-gray-800 transition flex items-center justify-center"
+            className="w-full bg-[#2563eb] pl-5 text-white font-semibold py-2.5 rounded-2xl hover:bg-[#3b82f6] transition"
             disabled={loading}
           >
             {loading ? (
@@ -141,6 +142,7 @@ const Login = () => {
               "Sign in"
             )}
           </button>
+          </div>
         </form>
       </div>
     </div>
