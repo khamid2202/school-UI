@@ -48,7 +48,14 @@ const Login = () => {
   //after logging in get the user from the backend and store it in local storage
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-[#eff6ff]">
+    <div className="md:flex md:flex-row">
+      <div className="md:w-1/2  md:block">
+        <div className="md:flex md:items-center md:justify-center md:min-h-screen md:bg-[#287eee]">
+          <img
+            src="../../../public/images/login_page.jpeg" className="md:h-full  md:w-full md:object-cover"/>
+        </div>
+      </div>
+      <div className="flex items-center md:w-1/2 justify-center min-h-screen bg-[#eff6ff]">
       <div className="w-[85%] max-w-md bg-white p-1 rounded-2xl shadow-2xl">
         {/* Logo */}
         <div className="flex justify-center p-8 mb-6">
@@ -65,7 +72,7 @@ const Login = () => {
           <div className="px-4">
             <label
               htmlFor="username"
-              className="block text-sm font-medium text-gray-700 mb-2"
+              className="block text-sm font-medium text-[#324158] mb-2"
             >
               Username
             </label>
@@ -90,7 +97,7 @@ const Login = () => {
           <div className="px-4">
             <label
               htmlFor="password"
-              className="block text-sm font-medium text-gray-700 mb-2"
+              className="block text-sm font-medium text-[#324158] mb-2"
             >
               Password
             </label>
@@ -145,6 +152,7 @@ const Login = () => {
           </div>
         </form>
       </div>
+    </div>
     </div>
   );
 };
