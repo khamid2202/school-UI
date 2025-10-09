@@ -45,3 +45,21 @@ export const sendLogoutRequest = async ({ onSuccess, onFail }) => {
     onFail(err?.response?.data?.message || err?.message || "Logout failed");
   }
 };
+
+//fetch user data
+export const fetchUserData = async ({ onSuccess, onFail }) => {
+  try {
+    const res = await api.get(endpoints.USER);
+    if (res.data) {
+      onSuccess(res.data);
+    } else {
+      onFail("Failed to fetch user data");
+    }
+  } catch (err) {
+    onFail(
+      err?.response?.data?.message ||
+        err?.message ||
+        "Failed to fetch user data"
+    );
+  }
+};

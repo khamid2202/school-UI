@@ -11,7 +11,7 @@ import {
   ChevronRight,
   LogOut,
 } from "lucide-react";
-import { sendLogoutRequest } from "../Library/Authenticate";
+import { sendLogoutRequest } from "../Library/Authenticate.jsx";
 
 function Navbar({ isExpanded, setIsExpanded }) {
   const location = useLocation();
@@ -20,10 +20,11 @@ function Navbar({ isExpanded, setIsExpanded }) {
 
   const isActive = (path) => location.pathname === path;
 
-  const user = JSON.parse(localStorage.getItem("user")).user || "{}";
+  const user = JSON.parse(localStorage.getItem("user")) || "{}";
+
   const firstLetter =
-    user.username && typeof user.username === "string"
-      ? user.username.charAt(0).toUpperCase()
+    user.user.username && typeof user.user.username === "string"
+      ? user.user.username.charAt(0).toUpperCase()
       : "U";
 
   const navItems = [
@@ -77,10 +78,10 @@ function Navbar({ isExpanded, setIsExpanded }) {
             {isExpanded && (
               <div>
                 <h1 className="font-semibold text-gray-800">
-                  {user.full_name || "User"}
+                  {user.user.full_name || "User"}
                 </h1>
                 <p className="text-sm text-gray-500">
-                  {user.username || "Admin Panel"}
+                  {user.user.username || "Admin Panel"}
                 </p>
               </div>
             )}
