@@ -1,52 +1,92 @@
-import React from "react";
-import tutors from "./dummyDataTutors.json";
+import React, { useEffect, useState } from "react";
+import { api } from "../../../Library/RequestMaker.jsx";
+import { endpoints } from "../../../Library/Endpoints.jsx";
 
 function Teachers() {
+  const [teachers, setTeachers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchTeachers = async () => {
+      try {
+        const res = await api.get(
+          endpoints.TEACHERS,
+          {},
+          { withCredentials: true }
+        );
+        // The teachers are in res.data.users
+        if (res.data && Array.isArray(res.data.users)) {
+          setTeachers(res.data.users);
+          localStorage.setItem("teachers", JSON.stringify(res.data.users));
+        } else {
+          setTeachers([]);
+        }
+      } catch (error) {
+        console.error("Failed to fetch teachers:", error);
+        setTeachers([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTeachers();
+  }, []);
+
+  if (loading) {
+    return <div className="p-6 text-lg">Loading teachers...</div>;
+  }
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
-      {tutors.map((tutor) => (
-        <div
-          key={tutor.id}
-          className="bg-white rounded-2xl p-5 shadow-md border hover:shadow-lg transition"
-        >
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">
-              {tutor.name[0]}
-            </div>
-            <div>
-              <h3 className="font-semibold">{tutor.name}</h3>
-              <p className="text-sm text-gray-500">{tutor.subject}</p>
-            </div>
-          </div>
-
-          <span
-            className="inline-block px-3 py-1 text-xs font-medium rounded-full mb-3"
-            style={{ backgroundColor: tutor.tagColor }}
-          >
-            {tutor.department}
-          </span>
-
-          <p className="text-sm mb-1">
-            <strong>Students:</strong> {tutor.students}
-          </p>
-          <p className="text-sm mb-3">
-            <strong>Classes:</strong> {tutor.classes}
-          </p>
-
-          <p className="text-sm text-gray-600 mb-1">{tutor.email}</p>
-          <p className="text-sm text-gray-600 mb-4">{tutor.phone}</p>
-
-          <div className="flex gap-2">
-            <button className="flex-1 border border-gray-300 rounded-lg py-2 hover:bg-gray-100">
-              View Profile
-            </button>
-            <button className="flex-1 bg-blue-600 text-white rounded-lg py-2 hover:bg-blue-700">
-              Contact
-            </button>
-          </div>
+    <div className="p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+      {teachers.length === 0 ? (
+        <div className="col-span-full text-center text-gray-500">
+          No teachers found.
         </div>
-      ))}
+      ) : (
+        teachers.map((teacher) => (
+          <div
+            key={teacher.id || teacher.uuid}
+            className="bg-white rounded-xl shadow-md p-6 flex flex-col items-start hover:shadow-lg transition"
+          >
+            <h3 className="text-2xl font-bold text-indigo-700 mb-2">
+              {teacher.full_name || teacher.username || "Unnamed Teacher"}
+            </h3>
+            <p className="text-gray-600 mb-1">
+              <span className="font-semibold">Username:</span>{" "}
+              {teacher.username}
+            </p>
+            <p className="text-gray-600 mb-1">
+              <span className="font-semibold">ID:</span>{" "}
+              {teacher.id || teacher.uuid}
+            </p>
+            {teacher.roles && teacher.roles.length > 0 && (
+              <p className="text-gray-600 mb-1">
+                <span className="font-semibold">Roles:</span>{" "}
+                {teacher.roles.join(", ")}
+              </p>
+            )}
+            {teacher.permissions && teacher.permissions.length > 0 && (
+              <p className="text-gray-600 mb-1">
+                <span className="font-semibold">Permissions:</span>{" "}
+                {teacher.permissions.join(", ")}
+              </p>
+            )}
+            {teacher.phone_number && (
+              <p className="text-gray-500">
+                <span className="font-semibold">Phone:</span>{" "}
+                {teacher.phone_number}
+              </p>
+            )}
+            {teacher.status && (
+              <p className="text-gray-500">
+                <span className="font-semibold">Status:</span> {teacher.status}
+              </p>
+            )}
+          </div>
+        ))
+      )}
     </div>
   );
 }
+
 export default Teachers;
