@@ -11,4 +11,5 @@ export const endpoints = {
   REVOKE: `/auth/revoke`,
   GROUPS: `/groups?academic_year=2024-2025`,
   TEACHERS: `/users`,
+  STUDENTS: `/students`,
 };

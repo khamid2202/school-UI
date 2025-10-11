@@ -9,6 +9,7 @@ import Configuration from "./Pages/admin/StudentSetting/Configuration";
 import Classes from "./Pages/admin/Groups/Classes";
 import Teachers from "./Pages/admin/Teachers/Teachers";
 import Scores from "./Pages/admin/Scoring/Scoring";
+import ClassManagement from "./Pages/admin/Groups/ClassManagement";
 
 // import "./index.css";
 
@@ -24,6 +25,7 @@ function App() {
           <Route path="/tuition-payments" element={<Payments />} />
           <Route path="/configuration" element={<Configuration />} />
           <Route path="/classes" element={<Classes />} />
+          <Route path="/class-management" element={<ClassManagement />} />
           <Route path="/teachers" element={<Teachers />} />
           <Route path="/scores" element={<Scores />} />
         </Route>

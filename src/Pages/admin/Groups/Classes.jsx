@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { api } from "../../../Library/RequestMaker.jsx";
 import { endpoints } from "../../../Library/Endpoints.jsx";
 import { BookOpen, Users, User, MapPin, Clock } from "lucide-react";
@@ -8,6 +9,7 @@ function Classes() {
   const [filteredClasses, setFilteredClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchClasses = async () => {
@@ -113,7 +115,11 @@ function Classes() {
           filteredClasses.map((c) => (
             <div
               key={c.id || c.uuid}
-              className="bg-white rounded-xl shadow hover:shadow-lg transition p-6 relative"
+              className="bg-white rounded-xl shadow hover:shadow-lg transition p-6 relative cursor-pointer"
+              onClick={() => {
+                // Pass class info via state
+                navigate("/class-management", { state: { classInfo: c } });
+              }}
             >
               <div className="absolute top-4 right-4 bg-green-100 text-green-700 text-xs font-semibold px-2 py-1 rounded-full">
                 Active
@@ -123,7 +129,7 @@ function Classes() {
                   <BookOpen size={22} />
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900">
-                  {c.name || "Unnamed Class"}
+                  {c.grade + "-" + c.class || "Unnamed Class"}
                 </h3>
               </div>
               {c.teacher && (
