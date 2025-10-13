@@ -1,11 +1,10 @@
-// src/Components/PaymentPage/Payments.jsx
 import React, { useState } from "react";
 
 import PaymentsTable from "./PaymentsTable";
 
-const BASE_TUITION = 2600;
+const DORM_FEE = 700;
 
-export default function TuitionPayments() {
+export const DormPayments = () => {
   // get AllStudents from localStorage to use as initial data
   const studentsInit = (() => {
     const stored = localStorage.getItem("AllStudents");
@@ -13,88 +12,45 @@ export default function TuitionPayments() {
     try {
       const parsed = JSON.parse(stored);
       if (!Array.isArray(parsed)) return [];
-      const DEFAULT_PAYMENTS = {
-        September: false,
-        October: false,
-        November: false,
-        December: false,
-        January: false,
-        February: false,
-        March: false,
-        April: false,
-        May: false,
-        June: false,
-      };
-
       return parsed.map((s) => ({
-        // prefer full_name from AllStudents, but keep other fields
-        id: s.id ?? s.student_id ?? s.sgid,
-        name: s.name || s.full_name || "",
-        full_name: s.full_name || s.name || "",
+        ...s,
         dorm: s.dorm ?? false,
         hasEnglishTraining: s.hasEnglishTraining ?? false,
         discount: s.discount ?? 0,
-        payments:
-          s.payments && Object.keys(s.payments).length
-            ? s.payments
-            : DEFAULT_PAYMENTS,
       }));
     } catch {
       return [];
     }
   })();
 
-  // --- State ---
-
   const [studentData, setStudentData] = useState(studentsInit);
   const [search, setSearch] = useState("");
 
-  const months =
-    studentData.length && studentData[0].payments
-      ? Object.keys(studentData[0].payments)
-      : [
-          "September",
-          "October",
-          "November",
-          "December",
-          "January",
-          "February",
-          "March",
-          "April",
-          "May",
-          "June",
-        ];
+  const months = studentData.length ? Object.keys(studentData[0].payments) : [];
 
   const calculateMonthlyFee = (student) => {
-    const tuitionAfterDiscount = BASE_TUITION * (1 - (student.discount || 0));
-    return Math.round(tuitionAfterDiscount * 100) / 100;
+    // Dorm payments use a fixed dorm fee
+    return DORM_FEE;
   };
 
-  // --- Filter students by search only ---
   const filteredStudents = studentData.filter((student) => {
     const q = search.trim().toLowerCase();
     if (!q) return true;
-    const studentName = (student.name || student.full_name || "").toLowerCase();
     return (
-      studentName.includes(q) || String(student.id).toLowerCase().includes(q)
+      student.name.toLowerCase().includes(q) ||
+      String(student.id).toLowerCase().includes(q)
     );
   });
 
   return (
     <div className="min-h-screen flex flex-col">
       <div className="flex-1 p-6 overflow-x-auto">
-        {/* HEADER */}
         <div className="mb-6">
           <div className="flex items-center">
-            {/* Left: spacer */}
             <div className="w-1/3" />
-
-            {/* Center: Title */}
             <div className="w-1/3 text-center">
-              <h1 className="text-2xl font-bold">Tuition Payments</h1>
+              <h1 className="text-2xl font-bold">Dorm Payments</h1>
             </div>
-
-            {/* Right: Search */}
             <div className="w-1/3 flex justify-end">
               <input
                 type="text"
@@ -116,4 +72,4 @@ export default function TuitionPayments() {
       </div>
     </div>
   );
-}
+};

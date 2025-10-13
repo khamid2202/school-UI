@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import data from "../PaymentPage/dummyData.json";
 
 export default function Configuration() {
   const studentsInit =

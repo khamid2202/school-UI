@@ -42,7 +42,7 @@ function Navbar({ isExpanded, setIsExpanded }) {
     { to: "/home", icon: <Home size={20} />, label: "Home" },
     { to: "/classes", icon: <BookOpen size={20} />, label: "Classes" },
     {
-      to: "/tuition-payments",
+      to: "/payments",
       icon: <CreditCard size={20} />,
       label: "Payment",
     },

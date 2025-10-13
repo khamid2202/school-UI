@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { login } from "../../../Library/Authenticate";
 import { fetchUserData } from "../../../Library/Authenticate";
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -45,7 +46,9 @@ const Login = () => {
               console.warn("Failed to store user data in localStorage:", e);
             }
             setLoading(false);
-            navigate("/home");
+            // If user was redirected to login, go back to the original page
+            const fromPath = location.state?.from?.pathname || "/home";
+            navigate(fromPath);
           },
           onFail: (message) => {
             console.log("Failed to fetch user data:", message);
@@ -89,6 +92,12 @@ const Login = () => {
 
           {/* Form */}
           <form onSubmit={handleLogin} className="space-y-5 p-5">
+            {location.state?.from && (
+              <div className="bg-yellow-50 border-l-4 border-yellow-400 text-yellow-700 p-3 rounded mb-2">
+                You were redirected to sign in because the page you're trying to
+                access requires authentication.
+              </div>
+            )}
             <div className="px-4">
               <label
                 htmlFor="username"
