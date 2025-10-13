@@ -20,12 +20,23 @@ function Navbar({ isExpanded, setIsExpanded }) {
 
   const isActive = (path) => location.pathname === path;
 
-  const user = JSON.parse(localStorage.getItem("user")) || "{}";
+  // Safely parse the stored user. The app sometimes stores either { user: { ... } }
+  // or the user object directly. Also guard against missing/malformed JSON.
+  let user = {};
+  try {
+    const raw = localStorage.getItem("user");
+    user = raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    console.warn(
+      "Invalid user JSON in localStorage, falling back to empty user",
+      e
+    );
+    user = {};
+  }
 
-  const firstLetter =
-    user.user.username && typeof user.user.username === "string"
-      ? user.user.username.charAt(0).toUpperCase()
-      : "U";
+  // Support both shapes: { user: { username } } and { username }
+  const username = (user && (user.user?.username || user.username)) || "";
+  const firstLetter = username ? username.charAt(0).toUpperCase() : "U";
 
   const navItems = [
     { to: "/home", icon: <Home size={20} />, label: "Home" },
@@ -78,10 +89,10 @@ function Navbar({ isExpanded, setIsExpanded }) {
             {isExpanded && (
               <div>
                 <h1 className="font-semibold text-gray-800">
-                  {user.user.full_name || "User"}
+                  {user.user?.full_name || user.full_name || "User"}
                 </h1>
                 <p className="text-sm text-gray-500">
-                  {user.user.username || "Admin Panel"}
+                  {user.user?.username || user.username || "Admin Panel"}
                 </p>
               </div>
             )}

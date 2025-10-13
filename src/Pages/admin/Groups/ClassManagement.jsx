@@ -11,6 +11,7 @@ function ClassManagement() {
 
   useEffect(() => {
     if (!classInfo) return;
+
     const fetchStudents = async () => {
       setLoading(true);
       try {
@@ -27,6 +28,7 @@ function ClassManagement() {
         setLoading(false);
       }
     };
+
     fetchStudents();
   }, [classInfo]);
 
@@ -51,18 +53,18 @@ function ClassManagement() {
           No students found for this class.
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
           {students.map((student) => (
             <div
               key={student.sgid || student.student_id}
-              className="bg-white rounded-2xl shadow-lg p-6 flex flex-col items-start gap-4 border border-gray-200 hover:shadow-xl transition"
+              className="bg-white rounded-2xl shadow-lg p-6 flex flex-col items-start gap-4 border border-gray-200 hover:shadow-xl transition overflow-hidden"
             >
-              <div className="flex items-center justify-between w-full mb-2">
-                <h3 className="text-2xl font-bold text-gray-900">
+              <div className="flex items-center justify-between w-full mb-2 min-w-0">
+                <h3 className="text-2xl font-bold text-gray-900 truncate min-w-0 overflow-hidden">
                   {student.full_name}
                 </h3>
                 <span
-                  className={`px-3 py-1 rounded-full text-base font-semibold ${
+                  className={`px-3 py-1 rounded-full text-base font-semibold flex-shrink-0 ml-3 ${
                     student.status === "active"
                       ? "bg-green-100 text-green-700"
                       : "bg-red-100 text-red-700"

@@ -28,6 +28,21 @@ function Classes() {
     };
 
     fetchClasses();
+
+    // Fetch all students once when component mounts and store in localStorage
+    const fetchAllStudents = async () => {
+      try {
+        const res = await api.get(
+          endpoints.STUDENTS + "?academic_year=2024-2025&include_group=1"
+        );
+        const students = res.data?.students || res.data || [];
+        localStorage.setItem("AllStudents", JSON.stringify(students));
+      } catch (error) {
+        console.error("Failed to fetch all students:", error);
+      }
+    };
+
+    fetchAllStudents();
   }, []);
 
   useEffect(() => {

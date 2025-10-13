@@ -30,32 +30,37 @@ const Login = () => {
       return;
     }
 
-    await login({
+    login({
       username: username.trim().toLowerCase(),
       password,
       onSuccess: () => {
         console.log("Login successful");
-        // Fetch user data after successful login
+        // Fetch user data after successful login and only navigate after it's stored
         fetchUserData({
           onSuccess: (data) => {
             console.log("Fetched user data:", data);
-            localStorage.setItem("user", JSON.stringify(data));
+            try {
+              localStorage.setItem("user", JSON.stringify(data));
+            } catch (e) {
+              console.warn("Failed to store user data in localStorage:", e);
+            }
+            setLoading(false);
+            navigate("/home");
           },
           onFail: (message) => {
             console.log("Failed to fetch user data:", message);
             setError(message || "Failed to fetch user data. Please try again.");
+            setLoading(false);
           },
         });
-
-        navigate("/home");
       },
 
       onFail: (message) => {
         console.log("Login failed:", message);
         setError(message || "Login failed. Please try again.");
+        setLoading(false);
       },
     });
-    setLoading(false);
   };
 
   //after logging in get the user from the backend and store it in local storage
