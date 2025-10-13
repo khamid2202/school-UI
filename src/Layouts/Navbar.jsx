@@ -75,7 +75,7 @@ function Navbar({ isExpanded, setIsExpanded }) {
   return (
     <>
       <nav
-        className={`flex flex-col justify-between bg-white border-r border-gray-200 h-screen shadow-md fixed left-0 top-0 z-40 transition-all duration-300 ${
+        className={`hidden md:flex flex-col justify-between bg-white border-r border-gray-200 h-screen shadow-md fixed left-0 top-0 z-40 transition-all duration-300 ${
           isExpanded ? "w-64" : "w-20"
         }`}
       >
@@ -156,6 +156,41 @@ function Navbar({ isExpanded, setIsExpanded }) {
           )}
         </div>
       </nav>
+
+      {/* Mobile bottom navigation (visible on small screens) */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
+        <div className="max-w-4xl mx-auto px-3">
+          <div className="flex items-center justify-between py-2">
+            {navItems.map((item) => {
+              const active = isActive(item.to);
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className={`flex flex-col items-center justify-center text-xs gap-1 w-1/6 py-1 transition`}
+                >
+                  <div
+                    className={`p-2 rounded-lg ${
+                      active
+                        ? "bg-white ring-2 ring-indigo-500 text-indigo-600 shadow"
+                        : "text-gray-600"
+                    }`}
+                  >
+                    {item.icon}
+                  </div>
+                  <span
+                    className={`${
+                      active ? "text-indigo-600 font-medium" : "text-gray-600"
+                    }`}
+                  >
+                    {item.label}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </div>
 
       {/* Logout Modal */}
       {showModal && (

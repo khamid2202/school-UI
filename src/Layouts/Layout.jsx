@@ -14,8 +14,9 @@ function LayoutWithHeader() {
       {/* Main content area */}
       <main
         className={`flex-1 transition-all duration-300 ${
-          isExpanded ? "ml-64" : "ml-20"
-        } p-6`}
+          // Apply left margin only on medium and larger screens where the sidebar is visible
+          isExpanded ? "md:ml-64" : "md:ml-20"
+        } p-6 pb-20`}
       >
         <Outlet />
       </main>
