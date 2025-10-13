@@ -83,94 +83,96 @@ export default function PaymentsTable({
       {/* Desktop table (hidden on small screens) */}
       <div className="hidden md:block overflow-x-auto">
         <table className="min-w-full border border-gray-300 text-sm">
-        <thead>
-          <tr className="bg-gray-100">
-            <th className="border px-2 py-1">ID</th>
-            <th className="border px-2 py-1">Full Name</th>
-            <th className="border px-2 py-1">Class</th>
-            {months.map((month) => (
-              <th key={month} className="border px-2 py-1">
-                {month}
-              </th>
-            ))}
-            <th className="border px-2 py-1">Amount</th>
-            <th className="border px-2 py-1">Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filteredStudents.length === 0 && (
-            <tr>
-              <td
-                colSpan={months.length + 5}
-                className="text-center p-4 text-gray-500"
-              >
-                No students found.
-              </td>
-            </tr>
-          )}
-
-          {filteredStudents.map((student) => (
-            <tr key={student.id} className="text-center">
-              <td className="border px-2 py-1">{student.id}</td>
-              <td className="border px-2 py-1 text-left pl-4">
-                {allStudentsInfo.names[student.id] ||
-                  student.full_name ||
-                  student.name}
-              </td>
-              <td className="border px-2 py-1">
-                {allStudentsInfo.classes[student.id] ||
-                  student.group?.class_pair ||
-                  student.group?.class_pair_compact ||
-                  ""}
-              </td>
-              {/* Dorm and Course columns removed */}
-
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="border px-2 py-1">ID</th>
+              <th className="border px-2 py-1">Full Name</th>
+              <th className="border px-2 py-1">Class</th>
               {months.map((month) => (
-                <td
-                  key={month}
-                  className={`border px-2 py-1 ${
-                    student.payments && student.payments[month]
-                      ? "bg-green-200"
-                      : "bg-red-200"
-                  }`}
-                >
-                  {student.payments && student.payments[month]
-                    ? "Paid"
-                    : "Unpaid"}
-                </td>
+                <th key={month} className="border px-2 py-1">
+                  {month}
+                </th>
               ))}
-
-              <td className="border px-2 py-1">
-                <input
-                  type="number"
-                  step="0.01"
-                  placeholder={`${calculateMonthlyFee(student)}`}
-                  value={amounts[student.id] || ""}
-                  onChange={(e) =>
-                    handleInputChange(student.id, e.target.value)
-                  }
-                  className="border p-1 w-28 rounded"
-                />
-              </td>
-
-              <td className="border px-2 py-1">
-                <button
-                  onClick={() => handleSave(student.id)}
-                  className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded"
-                >
-                  Save
-                </button>
-              </td>
+              <th className="border px-2 py-1">Amount</th>
+              <th className="border px-2 py-1">Action</th>
             </tr>
-          ))}
-        </tbody>
+          </thead>
+          <tbody>
+            {filteredStudents.length === 0 && (
+              <tr>
+                <td
+                  colSpan={months.length + 5}
+                  className="text-center p-4 text-gray-500"
+                >
+                  No students found.
+                </td>
+              </tr>
+            )}
+
+            {filteredStudents.map((student) => (
+              <tr key={student.id} className="text-center">
+                <td className="border px-2 py-1">{student.id}</td>
+                <td className="border px-2 py-1 text-left pl-4">
+                  {allStudentsInfo.names[student.id] ||
+                    student.full_name ||
+                    student.name}
+                </td>
+                <td className="border px-2 py-1">
+                  {allStudentsInfo.classes[student.id] ||
+                    student.group?.class_pair ||
+                    student.group?.class_pair_compact ||
+                    ""}
+                </td>
+                {/* Dorm and Course columns removed */}
+
+                {months.map((month) => (
+                  <td
+                    key={month}
+                    className={`border px-2 py-1 ${
+                      student.payments && student.payments[month]
+                        ? "bg-green-200"
+                        : "bg-red-200"
+                    }`}
+                  >
+                    {student.payments && student.payments[month]
+                      ? "Paid"
+                      : "Unpaid"}
+                  </td>
+                ))}
+
+                <td className="border px-2 py-1">
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder={`${calculateMonthlyFee(student)}`}
+                    value={amounts[student.id] || ""}
+                    onChange={(e) =>
+                      handleInputChange(student.id, e.target.value)
+                    }
+                    className="border p-1 w-28 rounded"
+                  />
+                </td>
+
+                <td className="border px-2 py-1">
+                  <button
+                    onClick={() => handleSave(student.id)}
+                    className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded"
+                  >
+                    Save
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
         </table>
       </div>
 
       {/* Mobile card list (visible on small screens) */}
       <div className="md:hidden space-y-4">
         {filteredStudents.length === 0 && (
-          <div className="text-center p-4 text-gray-500">No students found.</div>
+          <div className="text-center p-4 text-gray-500">
+            No students found.
+          </div>
         )}
 
         {filteredStudents.map((student) => (
@@ -182,10 +184,15 @@ export default function PaymentsTable({
               <div>
                 <div className="text-sm text-gray-500">ID: {student.id}</div>
                 <div className="text-lg font-semibold">
-                  {allStudentsInfo.names[student.id] || student.full_name || student.name}
+                  {allStudentsInfo.names[student.id] ||
+                    student.full_name ||
+                    student.name}
                 </div>
                 <div className="text-sm text-gray-500">
-                  {allStudentsInfo.classes[student.id] || student.group?.class_pair || student.group?.class_pair_compact || ""}
+                  {allStudentsInfo.classes[student.id] ||
+                    student.group?.class_pair ||
+                    student.group?.class_pair_compact ||
+                    ""}
                 </div>
               </div>
               <div className="text-right">
@@ -196,7 +203,9 @@ export default function PaymentsTable({
                     step="0.01"
                     placeholder={`${calculateMonthlyFee(student)}`}
                     value={amounts[student.id] || ""}
-                    onChange={(e) => handleInputChange(student.id, e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange(student.id, e.target.value)
+                    }
                     className="border p-1 w-28 rounded"
                   />
                 </div>
@@ -221,7 +230,10 @@ export default function PaymentsTable({
                       : "bg-red-200 text-red-800"
                   }`}
                 >
-                  {month.slice(0, 3)}: {(student.payments && student.payments[month]) ? "Paid" : "Unpaid"}
+                  {month.slice(0, 3)}:{" "}
+                  {student.payments && student.payments[month]
+                    ? "Paid"
+                    : "Unpaid"}
                 </div>
               ))}
             </div>
