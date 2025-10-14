@@ -1,36 +1,49 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { api } from "../../../Library/RequestMaker.jsx";
 import { endpoints } from "../../../Library/Endpoints.jsx";
+import AddStudentModal from "./AddStudentModal";
 
 function ClassManagement() {
   const location = useLocation();
   const classInfo = location.state?.classInfo;
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showAddModal, setShowAddModal] = useState(false);
+
+  // determine if current user has teacher role
+  let localUser = {};
+  try {
+    const raw = localStorage.getItem("user");
+    localUser = raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    localUser = {};
+  }
+  const roles = localUser?.user?.roles || localUser?.roles || [];
+  const isTeacher = Array.isArray(roles) && roles.includes("teacher");
+
+  const fetchStudents = useCallback(async () => {
+    if (!classInfo) return;
+    setLoading(true);
+    try {
+      const classPair = `${classInfo.grade}-${classInfo.class}`;
+      const filter = encodeURIComponent(
+        JSON.stringify({ class_pairs: [classPair] })
+      );
+      const url = `${endpoints.STUDENTS}?academic_year=2024-2025&filter=${filter}&include_group=1`;
+      const res = await api.get(url);
+      setStudents(res.data?.students || []);
+    } catch (error) {
+      console.error("Failed to fetch students:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [classInfo]);
 
   useEffect(() => {
     if (!classInfo) return;
-
-    const fetchStudents = async () => {
-      setLoading(true);
-      try {
-        const classPair = `${classInfo.grade}-${classInfo.class}`;
-        const filter = encodeURIComponent(
-          JSON.stringify({ class_pairs: [classPair] })
-        );
-        const url = `${endpoints.STUDENTS}?academic_year=2024-2025&filter=${filter}&include_group=1`;
-        const res = await api.get(url);
-        setStudents(res.data?.students || []);
-      } catch (error) {
-        console.error("Failed to fetch students:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchStudents();
-  }, [classInfo]);
+  }, [classInfo, fetchStudents]);
 
   if (!classInfo) {
     return <div className="p-6 text-lg">No class selected.</div>;
@@ -45,6 +58,16 @@ function ClassManagement() {
         <p className="text-2xl font-bold text-indigo-700 text-center">
           Teacher: {classInfo.teacher}
         </p>
+        {isTeacher && (
+          <div className="mt-4">
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+            >
+              Add Student
+            </button>
+          </div>
+        )}
       </div>
       {loading ? (
         <div className="text-xl font-medium">Loading students...</div>
@@ -92,6 +115,16 @@ function ClassManagement() {
           ))}
         </div>
       )}
+
+      <AddStudentModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        defaultClass={`${classInfo.grade}-${classInfo.class}`}
+        groupId={classInfo.id}
+        onAdd={async () => {
+          await fetchStudents();
+        }}
+      />
     </div>
   );
 }

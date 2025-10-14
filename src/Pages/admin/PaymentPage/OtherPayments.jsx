@@ -12,11 +12,30 @@ export const OtherPayments = () => {
     try {
       const parsed = JSON.parse(stored);
       if (!Array.isArray(parsed)) return [];
+      const DEFAULT_PAYMENTS = {
+        September: false,
+        October: false,
+        November: false,
+        December: false,
+        January: false,
+        February: false,
+        March: false,
+        April: false,
+        May: false,
+        June: false,
+      };
+
       return parsed.map((s) => ({
-        ...s,
+        id: s.id ?? s.student_id ?? s.sgid,
+        name: s.name || s.full_name || "",
+        full_name: s.full_name || s.name || "",
         dorm: s.dorm ?? false,
         hasEnglishTraining: s.hasEnglishTraining ?? false,
         discount: s.discount ?? 0,
+        payments:
+          s.payments && Object.keys(s.payments).length
+            ? s.payments
+            : DEFAULT_PAYMENTS,
       }));
     } catch {
       return [];
@@ -26,7 +45,21 @@ export const OtherPayments = () => {
   const [studentData, setStudentData] = useState(studentsInit);
   const [search, setSearch] = useState("");
 
-  const months = studentData.length ? Object.keys(studentData[0].payments) : [];
+  const months =
+    studentData.length && studentData[0].payments
+      ? Object.keys(studentData[0].payments)
+      : [
+          "September",
+          "October",
+          "November",
+          "December",
+          "January",
+          "February",
+          "March",
+          "April",
+          "May",
+          "June",
+        ];
 
   const calculateMonthlyFee = (student) => {
     // Other payments currently mapped to training fee if applicable
@@ -36,9 +69,9 @@ export const OtherPayments = () => {
   const filteredStudents = studentData.filter((student) => {
     const q = search.trim().toLowerCase();
     if (!q) return true;
+    const studentName = (student.name || student.full_name || "").toLowerCase();
     return (
-      student.name.toLowerCase().includes(q) ||
-      String(student.id).toLowerCase().includes(q)
+      studentName.includes(q) || String(student.id).toLowerCase().includes(q)
     );
   });
 

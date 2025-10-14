@@ -12,4 +12,6 @@ export const endpoints = {
   GROUPS: `/groups?academic_year=2024-2025`,
   TEACHERS: `/users`,
   STUDENTS: `/students`,
+  CREATE_STUDENT: `/students`,
+  ASSIGN_STUDENT_GROUP: `/students/assign-group`,
 };
