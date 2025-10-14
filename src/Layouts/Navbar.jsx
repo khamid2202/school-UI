@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import {
   Home,
   BookOpen,
@@ -17,6 +17,7 @@ function Navbar({ isExpanded, setIsExpanded }) {
   const location = useLocation();
   const [showModal, setShowModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showToggle, setShowToggle] = useState(false);
 
   const isActive = (path) => location.pathname === path;
 
@@ -72,89 +73,108 @@ function Navbar({ isExpanded, setIsExpanded }) {
     setShowModal(false);
   };
 
+  const handleToggleEnter = () => setShowToggle(true);
+  const handleToggleLeave = () => setShowToggle(false);
+
   return (
     <>
       <nav
-        className={`hidden md:flex flex-col justify-between bg-white border-r border-gray-200 h-screen shadow-md fixed left-0 top-0 z-40 transition-all duration-300 ${
-          isExpanded ? "w-64" : "w-20"
+        className={`hidden md:flex flex-row justify-between bg-white border-r border-gray-200 h-screen shadow-md fixed left-0 top-0 z-40 transition-all duration-300 ${
+          isExpanded ? "w-44" : "w-20"
         }`}
       >
-        {/* Top Section */}
-        <div>
-          {/* Logo Section */}
-          <div className="flex items-center gap-3 px-5 py-6 border-b">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold">
-              {firstLetter}
+        <div className="flex flex-col justify-between h-full relative">
+          {/* Collapse / Expand Button */}
+          <div
+            className="absolute -right-3 top-1/2 -translate-y-1/2 z-50"
+            onMouseEnter={handleToggleEnter}
+            onMouseLeave={handleToggleLeave}
+          >
+            <button
+              className={`bg-white border border-gray-300 rounded-full p-1 shadow-md hover:bg-gray-100 transition-opacity duration-100 z-50 ${
+                showToggle ? "opacity-100" : "opacity-0 pointer-events-none"
+              }`}
+              onClick={() => setIsExpanded((prev) => !prev)}
+            >
+              {isExpanded ? (
+                <ChevronLeft className="text-gray-600" size={20} />
+              ) : (
+                <ChevronRight className="text-gray-600" size={20} />
+              )}
+            </button>
+          </div>
+
+          {/* Top Section */}
+          <div>
+            {/* Logo Section */}
+            <div className="flex items-center gap-3 px-5 py-6 border-b">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold">
+                {firstLetter}
+              </div>
+              {isExpanded && (
+                <div>
+                  <h1 className="font-semibold text-gray-800">
+                    {user.user?.full_name || user.full_name || "User"}
+                  </h1>
+                  <p className="text-sm text-gray-500">
+                    {user.user?.username || user.username || "Admin Panel"}
+                  </p>
+                </div>
+              )}
             </div>
-            {isExpanded && (
-              <div>
-                <h1 className="font-semibold text-gray-800">
-                  {user.user?.full_name || user.full_name || "User"}
-                </h1>
-                <p className="text-sm text-gray-500">
-                  {user.user?.username || user.username || "Admin Panel"}
-                </p>
+
+            {/* Nav Links */}
+            <div className="flex flex-col mt-4 space-y-1">
+              {navItems.map((item) => (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className={`flex items-center gap-3 px-5 py-3 mx-3 rounded-xl text-sm font-medium transition-all ${
+                    isActive(item.to)
+                      ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-md"
+                      : "text-gray-600 hover:bg-gray-100 hover:text-indigo-600"
+                  }`}
+                >
+                  {item.icon}
+                  {isExpanded && <span>{item.label}</span>}
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* Bottom Section */}
+          <div className="p-4 border-t flex justify-between items-center relative">
+            {/* Settings Button */}
+            <button
+              className="w-full px-3 py-2 rounded-xl bg-gradient-to-r from-gray-200 to-gray-300 text-gray-700 font-semibold hover:from-gray-300 hover:to-gray-400 transition flex items-center justify-center"
+              onClick={() => setShowSettings((prev) => !prev)}
+            >
+              <Settings size={18} className="mr-2" />
+              {isExpanded && "Settings"}
+            </button>
+
+            {/* Settings Dropdown */}
+            {showSettings && (
+              <div
+                className={`absolute left-0 bottom-16 w-full bg-white border border-gray-200 rounded-xl shadow-lg py-2 z-50 flex flex-col items-center`}
+              >
+                <button
+                  className="w-11/12 flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 transition text-gray-700"
+                  onClick={handleLogOut}
+                >
+                  <LogOut size={18} />
+                  {isExpanded && "Log Out"}
+                </button>
               </div>
             )}
           </div>
-
-          {/* Nav Links */}
-          <div className="flex flex-col mt-4 space-y-1">
-            {navItems.map((item) => (
-              <Link
-                key={item.to}
-                to={item.to}
-                className={`flex items-center gap-3 px-5 py-3 mx-3 rounded-xl text-sm font-medium transition-all ${
-                  isActive(item.to)
-                    ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-md"
-                    : "text-gray-600 hover:bg-gray-100 hover:text-indigo-600"
-                }`}
-              >
-                {item.icon}
-                {isExpanded && <span>{item.label}</span>}
-              </Link>
-            ))}
-          </div>
         </div>
-
-        {/* Bottom Section */}
-        <div className="p-4 border-t flex justify-between items-center relative">
-          {/* Settings Button */}
-          <button
-            className="w-full px-3 py-2 rounded-xl bg-gradient-to-r from-gray-200 to-gray-300 text-gray-700 font-semibold hover:from-gray-300 hover:to-gray-400 transition flex items-center justify-center"
-            onClick={() => setShowSettings((prev) => !prev)}
-          >
-            <Settings size={18} className="mr-2" />
-            {isExpanded && "Settings"}
-          </button>
-
-          {/* Collapse / Expand Button */}
-          <button
-            className="absolute -right-3 bottom-6 bg-white border border-gray-300 rounded-full p-1 shadow-md hover:bg-gray-100 transition"
-            onClick={() => setIsExpanded((prev) => !prev)}
-          >
-            {isExpanded ? (
-              <ChevronLeft className="text-gray-600" size={20} />
-            ) : (
-              <ChevronRight className="text-gray-600" size={20} />
-            )}
-          </button>
-
-          {/* Settings Dropdown */}
-          {showSettings && (
-            <div
-              className={`absolute left-0 bottom-16 w-full bg-white border border-gray-200 rounded-xl shadow-lg py-2 z-50 flex flex-col items-center`}
-            >
-              <button
-                className="w-11/12 flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 transition text-gray-700"
-                onClick={handleLogOut}
-              >
-                <LogOut size={18} />
-                {isExpanded && "Log Out"}
-              </button>
-            </div>
-          )}
-        </div>
+        <div
+          className="ml-5 w-6 h-screen absolute right-0 top-0 "
+          onMouseEnter={handleToggleEnter}
+          onMouseLeave={handleToggleLeave}
+          aria-hidden="true"
+        />
       </nav>
 
       {/* Mobile bottom navigation (visible on small screens) */}
