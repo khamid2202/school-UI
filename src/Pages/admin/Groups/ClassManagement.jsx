@@ -30,7 +30,7 @@ function ClassManagement() {
       const filter = encodeURIComponent(
         JSON.stringify({ class_pairs: [classPair] })
       );
-      const url = `${endpoints.STUDENTS}?academic_year=2024-2025&filter=${filter}&include_group=1`;
+      const url = `${endpoints.STUDENTS}?academic_year=2025-2026&filter=${filter}&include_group=1`;
       const res = await api.get(url);
       setStudents(res.data?.students || []);
     } catch (error) {
@@ -93,8 +93,10 @@ function ClassManagement() {
                       : "bg-red-100 text-red-700"
                   }`}
                 >
-                  {student.status.charAt(0).toUpperCase() +
-                    student.status.slice(1)}
+                  {student.status
+                    ? student.status.charAt(0).toUpperCase() +
+                      student.status.slice(1)
+                    : "Unknown"}
                 </span>
               </div>
               <div className="w-full flex flex-col gap-2 text-lg">

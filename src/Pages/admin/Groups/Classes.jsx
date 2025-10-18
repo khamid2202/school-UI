@@ -33,7 +33,7 @@ function Classes() {
     const fetchAllStudents = async () => {
       try {
         const res = await api.get(
-          endpoints.STUDENTS + "?academic_year=2024-2025&include_group=1"
+          endpoints.STUDENTS + "?academic_year=2025-2026&include_group=1"
         );
         const students = res.data?.students || res.data || [];
         localStorage.setItem("AllStudents", JSON.stringify(students));

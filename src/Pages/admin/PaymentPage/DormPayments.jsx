@@ -1,96 +1,75 @@
-import React, { useState } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 
 import PaymentsTable from "./PaymentsTable";
 
 const DORM_FEE = 700;
 
-export const DormPayments = () => {
-  // get AllStudents from localStorage to use as initial data
-  const studentsInit = (() => {
-    const stored = localStorage.getItem("AllStudents");
-    if (!stored) return [];
-    try {
-      const parsed = JSON.parse(stored);
-      if (!Array.isArray(parsed)) return [];
-      const DEFAULT_PAYMENTS = {
-        September: false,
-        October: false,
-        November: false,
-        December: false,
-        January: false,
-        February: false,
-        March: false,
-        April: false,
-        May: false,
-        June: false,
-      };
-
-      return parsed.map((s) => ({
-        id: s.id ?? s.student_id ?? s.sgid,
-        name: s.name || s.full_name || "",
-        full_name: s.full_name || s.name || "",
-        dorm: s.dorm ?? false,
-        hasEnglishTraining: s.hasEnglishTraining ?? false,
-        discount: s.discount ?? 0,
-        payments:
-          s.payments && Object.keys(s.payments).length
-            ? s.payments
-            : DEFAULT_PAYMENTS,
-      }));
-    } catch {
-      return [];
-    }
-  })();
-
-  const [studentData, setStudentData] = useState(studentsInit);
+export const DormPayments = ({
+  students,
+  setStudents,
+  months,
+  loading,
+  loadingMore,
+  error,
+  onRefresh,
+  hasMore,
+  onLoadMore,
+}) => {
   const [search, setSearch] = useState("");
 
-  const months =
-    studentData.length && studentData[0].payments
-      ? Object.keys(studentData[0].payments)
-      : [
-          "September",
-          "October",
-          "November",
-          "December",
-          "January",
-          "February",
-          "March",
-          "April",
-          "May",
-          "June",
-        ];
+  const monthItems = useMemo(() => {
+    if (!Array.isArray(months)) return [];
+    return months.map((month) => ({
+      key: month.key ?? month.label ?? String(month),
+      label: month.label ?? month.key ?? String(month),
+      month: month.month ?? null,
+      year: month.year ?? null,
+    }));
+  }, [months]);
 
-  const calculateMonthlyFee = (student) => {
-    // Dorm payments use a fixed dorm fee
-    return DORM_FEE;
-  };
-
-  const filteredStudents = studentData.filter((student) => {
+  const filteredStudents = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return true;
-    const studentName = (student.name || student.full_name || "").toLowerCase();
-    return (
-      studentName.includes(q) || String(student.id).toLowerCase().includes(q)
-    );
-  });
+    if (!q) return students;
+    return students.filter((student) => {
+      const studentName = (
+        student.full_name ||
+        student.name ||
+        ""
+      ).toLowerCase();
+      return (
+        studentName.includes(q) || String(student.id).toLowerCase().includes(q)
+      );
+    });
+  }, [students, search]);
+
+  const calculateMonthlyFee = useCallback(() => DORM_FEE, []);
 
   return (
     <div className="min-h-screen flex flex-col">
       <div className="flex-1 p-6 overflow-x-auto">
         <div className="mb-6">
-          <div className="flex items-center">
-            <div className="w-1/3" />
-            <div className="w-1/3 text-center">
+          <div className="flex items-center gap-3 flex-wrap md:flex-nowrap">
+            <div className="w-full md:w-1/3" />
+            <div className="w-full md:w-1/3 text-center">
               <h1 className="text-2xl font-bold">Dorm Payments</h1>
             </div>
-            <div className="w-1/3 flex justify-end">
+            <div className="w-full md:w-1/3 flex justify-end items-center gap-2">
+              {onRefresh && (
+                <button
+                  type="button"
+                  onClick={() => onRefresh()}
+                  className="px-3 py-2 rounded-md border border-indigo-200 text-indigo-600 hover:bg-indigo-50"
+                  disabled={loading}
+                >
+                  {loading ? "Refreshing..." : "Refresh"}
+                </button>
+              )}
               <input
                 type="text"
                 placeholder="Search by ID or name"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="border px-3 py-2 rounded w-64"
+                className="border px-3 py-2 rounded w-full md:w-64"
               />
             </div>
           </div>
@@ -98,9 +77,14 @@ export const DormPayments = () => {
 
         <PaymentsTable
           studentData={filteredStudents}
-          setStudentData={setStudentData}
-          months={months}
+          setStudentData={setStudents}
+          months={monthItems}
           calculateMonthlyFee={calculateMonthlyFee}
+          loading={loading}
+          loadingMore={loadingMore}
+          error={error}
+          hasMore={hasMore}
+          onLoadMore={onLoadMore}
         />
       </div>
     </div>
