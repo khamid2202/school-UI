@@ -1,418 +1,670 @@
-import React, { useState, useMemo, useRef, useEffect } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { api } from "../../../Library/RequestMaker";
+import { endpoints } from "../../../Library/Endpoints";
+import PaymentModule from "./Paymentmodule";
 
-const normalizeMonths = (months) => {
-  if (!Array.isArray(months)) return [];
-  return months.map((month) => {
-    if (typeof month === "string") {
-      return { key: month, label: month, month: null, year: null };
-    }
-
-    const monthValue =
-      typeof month.month === "number"
-        ? month.month
-        : typeof month.month === "string"
-        ? Number(month.month)
-        : null;
-
-    const yearValue =
-      typeof month.year === "number"
-        ? month.year
-        : typeof month.year === "string"
-        ? Number(month.year)
-        : null;
-
-    return {
-      key: month.key ?? month.label ?? String(month),
-      label: month.label ?? month.key ?? String(month),
-      month: Number.isNaN(monthValue) ? null : monthValue,
-      year: Number.isNaN(yearValue) ? null : yearValue,
-    };
+function PaymentsTable() {
+  const [students, setStudents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState("");
+  const [meta, setMeta] = useState(null);
+  const [months, setMonths] = useState([]);
+  const [monthNames, setMonthNames] = useState([]);
+  const [openPayment, setOpenPayment] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [paymentData, setPaymentData] = useState({
+    amount: "",
+    method: "cash",
+    date: "",
   });
-};
-
-const getPaymentPresentation = (payment) => {
-  if (!payment) {
-    return { label: "No Data", isPaid: false, remaining: null, required: null };
-  }
-
-  const normalizedStatus = payment.status
-    ? String(payment.status).toLowerCase()
-    : "";
-
-  const remaining = payment.remaining_amount ?? payment.remaining;
-  const totalRequired = payment.total_required_amount ?? payment.required;
-  const totalPaid = payment.total_paid_amount ?? payment.paid;
-
-  const numericRemaining = Number(remaining);
-  const numericRequired = Number(totalRequired);
-  const numericPaid = Number(totalPaid);
-
-  const paidByStatus = ["paid", "complete", "completed"].includes(
-    normalizedStatus
-  );
-  const paidByAmounts =
-    (!Number.isNaN(numericRemaining) && numericRemaining <= 0) ||
-    (!Number.isNaN(numericRequired) &&
-      !Number.isNaN(numericPaid) &&
-      numericPaid >= numericRequired);
-
-  const isPaid = paidByStatus || paidByAmounts;
-  const label = payment.status || (isPaid ? "Paid" : "Unpaid");
-
-  return {
-    label,
-    isPaid,
-    remaining: Number.isNaN(numericRemaining) ? null : numericRemaining,
-    required: Number.isNaN(numericRequired) ? null : numericRequired,
-  };
-};
-
-export default function PaymentsTable({
-  studentData,
-  setStudentData,
-  months,
-  calculateMonthlyFee,
-  loading,
-  loadingMore,
-  error,
-  hasMore,
-  onLoadMore,
-}) {
-  const [amounts, setAmounts] = useState({});
-
-  const monthItems = useMemo(() => normalizeMonths(months), [months]);
-  const students = Array.isArray(studentData) ? studentData : [];
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [hasMore, setHasMore] = useState(true);
+  const [currentPage, setCurrentPage] = useState(0);
   const sentinelRef = useRef(null);
+  const isFetchingRef = useRef(false);
 
-  const formatWallet = (value, currency) => {
-    if (value === null || value === undefined) return "—";
-    const numeric = Number(value);
-    if (Number.isNaN(numeric)) return "—";
+  const getStudentKey = (student) => {
+    const key = student?.id ?? student?.student_id ?? student?.user_id ?? null;
+    return key !== null && key !== undefined ? String(key) : null;
+  };
 
-    if (currency) {
+  const resolveCurrentPage = (metaData, fallback) => {
+    if (!metaData || typeof metaData !== "object") return fallback;
+    if (typeof metaData.current_page === "number") return metaData.current_page;
+    if (typeof metaData.page === "number") return metaData.page;
+    if (
+      typeof metaData.offset === "number" &&
+      typeof metaData.limit === "number"
+    ) {
+      return Math.floor(metaData.offset / metaData.limit) + 1;
+    }
+    return fallback;
+  };
+
+  const computeHasMore = (metaData, fetchedLength) => {
+    if (!metaData || typeof metaData !== "object") {
+      return fetchedLength > 0;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(metaData, "next_page_url")) {
+      return Boolean(metaData.next_page_url);
+    }
+
+    if (
+      typeof metaData.current_page === "number" &&
+      typeof metaData.last_page === "number"
+    ) {
+      return metaData.current_page < metaData.last_page;
+    }
+
+    if (
+      typeof metaData.page === "number" &&
+      typeof metaData.total_pages === "number"
+    ) {
+      return metaData.page < metaData.total_pages;
+    }
+
+    if (
+      typeof metaData.offset === "number" &&
+      typeof metaData.limit === "number" &&
+      typeof metaData.total === "number"
+    ) {
+      return metaData.offset + metaData.limit < metaData.total;
+    }
+
+    if (
+      typeof metaData.end_index === "number" &&
+      typeof metaData.total === "number"
+    ) {
+      return metaData.end_index < metaData.total;
+    }
+
+    return fetchedLength > 0;
+  };
+
+  const mergeStudents = (existing, incoming) => {
+    if (!existing.length) return incoming;
+
+    const indexById = new Map();
+    const merged = [...existing];
+
+    merged.forEach((student, index) => {
+      const key = getStudentKey(student);
+      if (key !== null) {
+        indexById.set(key, index);
+      }
+    });
+
+    incoming.forEach((student) => {
+      const key = getStudentKey(student);
+      if (key !== null && indexById.has(key)) {
+        merged[indexById.get(key)] = student;
+        return;
+      }
+
+      if (key !== null) {
+        indexById.set(key, merged.length);
+      }
+      merged.push(student);
+    });
+
+    return merged;
+  };
+
+  const loadStudents = useCallback(
+    async (pageToLoad = 1, { append = false } = {}) => {
+      if (isFetchingRef.current) {
+        return;
+      }
+
+      isFetchingRef.current = true;
+
+      if (!append) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+
       try {
-        return new Intl.NumberFormat("en-US", {
-          style: "currency",
-          currency,
-          maximumFractionDigits: 2,
-        }).format(numeric);
-      } catch (error) {
-        // Fallback to plain number if currency code is invalid
-      }
-    }
-
-    return new Intl.NumberFormat("en-US", {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    }).format(numeric);
-  };
-
-  const handleInputChange = (id, value) => {
-    setAmounts((prev) => ({ ...prev, [id]: value }));
-  };
-
-  const handleSave = (id) => {
-    const student = students.find((s) => s.id === id);
-    if (!student) return;
-
-    const entered = Number(amounts[id]);
-    const expected = Number(calculateMonthlyFee(student));
-
-    if (Number.isNaN(entered)) {
-      setAmounts((prev) => ({ ...prev, [id]: "" }));
-      return;
-    }
-
-    const tolerance = Math.abs((entered || 0) - (expected || 0));
-
-    if (tolerance <= 0.01 && monthItems.length) {
-      const now = new Date();
-      const currentMonthName = now.toLocaleString("en-US", { month: "long" });
-      const currentYear = now.getFullYear();
-
-      const monthToMark =
-        monthItems.find((item) => {
-          if (item.month && item.year) {
-            return (
-              item.month === now.getMonth() + 1 && item.year === currentYear
-            );
-          }
-
-          return item.label
-            .toLowerCase()
-            .includes(currentMonthName.toLowerCase());
-        }) || monthItems[0];
-
-      if (monthToMark) {
-        setStudentData((prev) => {
-          if (!Array.isArray(prev)) return prev;
-          return prev.map((s) => {
-            if (s.id !== id) return s;
-            const existingPayments = s.payments || {};
-            const previousPayment = existingPayments[monthToMark.key] || {};
-            const requiredAmount =
-              previousPayment.total_required_amount ?? expected;
-
-            return {
-              ...s,
-              payments: {
-                ...existingPayments,
-                [monthToMark.key]: {
-                  ...previousPayment,
-                  key: monthToMark.key,
-                  label: monthToMark.label,
-                  status: "Paid",
-                  total_required_amount: requiredAmount,
-                  total_paid_amount: entered,
-                  remaining_amount: 0,
-                },
-              },
-            };
-          });
+        const response = await api.get(endpoints.GET_STUDENT_WITH_PAYMENTS, {
+          page: pageToLoad,
         });
-      }
-    }
 
-    setAmounts((prev) => ({ ...prev, [id]: "" }));
-  };
+        const fetchedStudents = response.data?.students || [];
+        const metaData = response.data?.meta || null;
+
+        setStudents((prev) =>
+          append ? mergeStudents(prev, fetchedStudents) : fetchedStudents
+        );
+        setMeta(metaData);
+        if (!append) {
+          setError("");
+        }
+
+        const resolvedPage = resolveCurrentPage(metaData, pageToLoad);
+        setCurrentPage(resolvedPage);
+
+        const moreAvailable = computeHasMore(metaData, fetchedStudents.length);
+        setHasMore(moreAvailable);
+      } catch (fetchError) {
+        console.error("Error fetching students with payments:", fetchError);
+        if (!append) {
+          setError("Failed to load students. Please try again later.");
+        }
+      } finally {
+        isFetchingRef.current = false;
+        if (!append) {
+          setLoading(false);
+        } else {
+          setLoadingMore(false);
+        }
+      }
+    },
+    []
+  );
+
+  // Load students with wallet information once on mount.
+  useEffect(() => {
+    loadStudents(1, { append: false });
+  }, [loadStudents]);
 
   useEffect(() => {
-    if (!hasMore || !onLoadMore) return;
-
-    const sentinel = sentinelRef.current;
-    if (!sentinel) return;
+    const node = sentinelRef.current;
+    if (!node) return undefined;
 
     const observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
-        if (entry?.isIntersecting && !loadingMore && !loading) {
-          onLoadMore();
-        }
+        if (!entry?.isIntersecting) return;
+        if (loading || loadingMore || !hasMore) return;
+        loadStudents(currentPage + 1, { append: true });
       },
-      { root: null, rootMargin: "200px", threshold: 0 }
+      { rootMargin: "200px" }
     );
 
-    observer.observe(sentinel);
+    observer.observe(node);
 
-    return () => {
-      observer.unobserve(sentinel);
-    };
-  }, [hasMore, onLoadMore, loadingMore, loading, students.length]);
+    return () => observer.disconnect();
+  }, [hasMore, currentPage, loadStudents, loading, loadingMore]);
+
+  useEffect(() => {
+    if (!students.length) {
+      setMonths([]);
+      setMonthNames([]);
+      return;
+    }
+
+    const monthLabelLookup = [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ];
+
+    const uniqueMonthMap = new Map();
+
+    students.forEach((student) => {
+      if (!Array.isArray(student?.payments)) return;
+
+      student.payments.forEach((payment, index) => {
+        if (!payment || typeof payment.month !== "number") return;
+
+        const year = payment.year ?? null;
+        const key = `${year ?? "na"}-${payment.month}`;
+
+        if (!uniqueMonthMap.has(key)) {
+          uniqueMonthMap.set(key, {
+            key,
+            monthNumber: payment.month,
+            year,
+          });
+        }
+      });
+    });
+
+    const monthEntries = Array.from(uniqueMonthMap.values());
+
+    if (!monthEntries.length) {
+      setMonths([]);
+      setMonthNames([]);
+      return;
+    }
+
+    // Define academic order: September (9) → October (10) → November (11) → December (12) → January (1) → ... → June (6)
+    const academicOrder = [9, 10, 11, 12, 1, 2, 3, 4, 5, 6];
+
+    // Sort months according to academic order, falling back to natural order for unknown months
+    const sortedMonths = monthEntries.sort((a, b) => {
+      const indexA = academicOrder.indexOf(a.monthNumber);
+      const indexB = academicOrder.indexOf(b.monthNumber);
+
+      if (indexA === -1 && indexB === -1) {
+        if (a.year === b.year) {
+          return a.monthNumber - b.monthNumber;
+        }
+        return (a.year ?? 0) - (b.year ?? 0);
+      }
+
+      if (indexA === -1) return 1; // push unknown months to the end
+      if (indexB === -1) return -1;
+
+      if (indexA === indexB) {
+        return (a.year ?? 0) - (b.year ?? 0);
+      }
+
+      return indexA - indexB;
+    });
+
+    const formattedMonthNames = sortedMonths.map((item) => ({
+      ...item,
+      label:
+        monthLabelLookup[item.monthNumber - 1] || `Month ${item.monthNumber}`,
+    }));
+
+    setMonths(sortedMonths);
+    setMonthNames(formattedMonthNames);
+  }, [students]);
+
+  const handleOpenPayment = (student) => {
+    console.log("Opening payment module for student:", student);
+    const billingCode = student.payments[0]?.billing_code || "";
+    const parts = billingCode.split("/");
+    const requiredAmount = parts.length > 1 ? parts[1] : "";
+
+    setSelectedStudent(student);
+    setPaymentData({
+      amount: requiredAmount,
+      method: "cash",
+      date: new Date().toISOString().split("T")[0], // default today
+    });
+    // console.log("The payment data is set to:", paymentData);
+    setOpenPayment(true);
+  };
+
+  const handleClosePayment = () => {
+    setOpenPayment(false);
+    setSelectedStudent(null);
+    setErrorMsg("");
+  };
+
+  //handle payment is here
+  const handleSubmitPayment = async (event) => {
+    event.preventDefault();
+    if (!selectedStudent) return;
+
+    setSubmitting(true);
+    setErrorMsg("");
+
+    try {
+      const amount = Number(paymentData.amount);
+      const isRefund = amount < 0; // refund if negative
+
+      const body = {
+        student_id: selectedStudent.id || selectedStudent.student_id,
+        purpose: selectedStudent.payments[0]?.billing_code || "NULL",
+        amount, // backend can get both negative and positive number
+        method: paymentData.method,
+        is_refund: isRefund, // tell backend it's a refund
+      };
+
+      console.log("Sending payment data:", body);
+
+      const response = await api.post(endpoints.CREATE_PAYMENT, body);
+
+      if (response.data.ok) {
+        console.log("Payment success:", response.data);
+        setOpenPayment(false);
+        await loadStudents(1, { append: false });
+      } else {
+        setErrorMsg(response.data.message || "Failed to record payment.");
+      }
+    } catch (error) {
+      console.error("Payment submission error:", error);
+      setErrorMsg("An error occurred while saving payment.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleChangePayment = (field, value) => {
+    setPaymentData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  //change months to appropriate names like 1 : January, 2 : February etc.
+
+  const formatWallet = (value) => {
+    if (value === null || value === undefined) return "—";
+    const numeric = Number(value);
+    if (Number.isNaN(numeric)) return "—";
+    return numeric;
+  };
+
+  const resolveWallet = (student) => {
+    if (!student) return null;
+    if (student.wallet?.uzs !== undefined) return student.wallet.uzs;
+  };
+
+  const findPaymentForMonth = (student, monthDescriptor) => {
+    if (!student || !Array.isArray(student.payments) || !monthDescriptor) {
+      return null;
+    }
+
+    return (
+      student.payments.find((payment) => {
+        if (!payment || typeof payment.month !== "number") return false;
+        if (payment.month !== monthDescriptor.monthNumber) return false;
+
+        if (
+          monthDescriptor.year !== null &&
+          monthDescriptor.year !== undefined &&
+          payment.year !== monthDescriptor.year
+        ) {
+          return false;
+        }
+
+        return true;
+      }) || null
+    );
+  };
+
+  const getStatusClasses = (status) => {
+    if (!status) return "bg-gray-100 text-gray-500";
+
+    const normalized = String(status).toLowerCase();
+
+    if (
+      normalized.includes("not paid") ||
+      normalized.includes("unpaid") ||
+      normalized.includes("overdue")
+    ) {
+      return "bg-red-100 text-red-600";
+    }
+
+    if (normalized.includes("partial")) {
+      return "bg-yellow-100 text-yellow-700";
+    }
+
+    if (normalized.includes("not full")) {
+      return "bg-yellow-100 text-yellow-700";
+    }
+
+    if (normalized.includes("paid")) {
+      return "bg-green-100 text-green-700";
+    }
+
+    if (normalized.includes("pending")) {
+      return "bg-blue-100 text-blue-700";
+    }
+
+    return "bg-gray-100 text-gray-600";
+  };
+
+  const MONTH_CELL_CLASSES = "w-[101px]  text-center";
 
   if (loading) {
     return (
-      <div className="w-full flex items-center justify-center py-10 text-gray-500">
-        Loading payments...
+      <div className="w-full py-10 text-center text-sm text-gray-500">
+        Loading students...
       </div>
     );
   }
 
-  if (error) {
+  if (error && !students.length) {
     return (
-      <div className="w-full flex items-center justify-center py-10 text-red-500">
+      <div className="w-full py-10 text-center text-sm text-red-500">
         {error}
       </div>
     );
   }
 
+  if (!students.length) {
+    return (
+      <div className="w-full py-10 text-center text-sm text-gray-500">
+        No students found.
+      </div>
+    );
+  }
+
   return (
-    <div>
-      {/* Desktop table (hidden on small screens) */}
-      <div className="hidden md:block overflow-x-auto">
-        <table className="min-w-full border border-gray-300 text-sm">
+    <div className="space-y-6">
+      <div className="hidden overflow-x-auto rounded-md border border-gray-200 bg-white md:block">
+        <table className="min-w-full divide-y divide-gray-200 text-sm">
           <thead>
-            <tr className="bg-gray-100">
-              <th className="border px-2 py-1">ID</th>
-              <th className="border px-2 py-1">Full Name</th>
-              <th className="border px-2 py-1">Class</th>
-              <th className="border px-2 py-1">Wallet</th>
-              {monthItems.map((month) => (
-                <th key={month.key} className="border px-2 py-1">
+            <tr className="bg-gray-100 text-gray-700">
+              <th className="border px-3 py-2 ">ID</th>
+              <th className="border px-3 py-2 min-w-[200px] whitespace-nowrap">
+                Name
+              </th>
+              <th className="border px-3 py-2 ">Class</th>
+              <th className="border px-3 py-2 ">Wallet</th>
+              {monthNames.map((month) => (
+                <th
+                  key={month.key}
+                  className={`border px-3 py-2 ${MONTH_CELL_CLASSES}`}
+                >
                   {month.label}
                 </th>
               ))}
-              <th className="border px-2 py-1">Amount</th>
-              <th className="border px-2 py-1">Action</th>
+              <th>Amount</th>
             </tr>
           </thead>
           <tbody>
-            {students.length === 0 && (
-              <tr>
-                <td
-                  colSpan={monthItems.length + 6}
-                  className="text-center p-4 text-gray-500"
-                >
-                  No students found.
-                </td>
-              </tr>
-            )}
+            {students.map((student, index) => {
+              const studentId =
+                student.id ?? student.student_id ?? student.user_id ?? index;
+              const classLabel =
+                student.class_pair ||
+                student.group?.class_pair ||
+                student.group?.class_pair_compact ||
+                "—";
 
-            {students.map((student) => (
-              <tr
-                key={student.id ?? student.student_id}
-                className="text-center"
-              >
-                <td className="border px-2 py-1">{student.id}</td>
-                <td className="border px-2 py-1 text-left pl-4">
-                  {student.full_name || student.name || "—"}
-                </td>
-                <td className="border px-2 py-1">
-                  {student.class_pair ||
-                    student.group?.class_pair ||
-                    student.group?.class_pair_compact ||
-                    ""}
-                </td>
-                <td className="border px-2 py-1 text-right">
-                  {formatWallet(student.wallet.uzs, student.wallet_currency)}
-                </td>
+              return (
+                <tr key={studentId} className="hover:bg-gray-50">
+                  <td className="justify-center whitespace-nowrap items-center border px-3 py-2">
+                    {studentId}
+                  </td>
+                  <td className="border px-3 py-2 align-middle whitespace-nowrap min-w-[200px]">
+                    <div className="rounded-md border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-medium text-gray-700 shadow-sm overflow-hidden text-ellipsis">
+                      {student.full_name || student.name || "—"}
+                    </div>
+                  </td>
+                  <td className=" justify-center items-center border px-3 py-2">
+                    {classLabel}
+                  </td>
+                  <td className="justify-center items-center border px-3 py-2 ">
+                    {formatWallet(resolveWallet(student))}
+                  </td>
+                  {monthNames.map((month) => {
+                    const paymentForMonth = findPaymentForMonth(student, month);
 
-                {monthItems.map((month) => {
-                  const payment = student.payments?.[month.key];
-                  const presentation = getPaymentPresentation(payment);
+                    return (
+                      <td
+                        key={month.key}
+                        className={`border px-1 py-1 align-middle ${MONTH_CELL_CLASSES} whitespace-nowrap`}
+                      >
+                        <div>
+                          {paymentForMonth ? (
+                            <span
+                              className={`inline-flex items-center rounded-full px-2 py-0.5 text-md font-bold ${getStatusClasses(
+                                paymentForMonth.status
+                              )}`}
+                            >
+                              {paymentForMonth.status === "Partially Paid"
+                                ? "Not Full"
+                                : paymentForMonth.status || "Status N/A"}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-gray-400">—</span>
+                          )}
+                        </div>
+                      </td>
+                    );
+                  })}
+                  <td className="justify-center items-center border px-3 py-2">
+                    {(() => {
+                      // get billing_code safely
+                      const billingCode =
+                        student.billing_code ||
+                        student.payments[0]?.billing_code ||
+                        "";
 
-                  return (
-                    <td
-                      key={month.key}
-                      className={`border px-2 py-1 ${
-                        presentation.isPaid ? "bg-green-200" : "bg-red-200"
-                      }`}
-                    >
-                      <div className="flex flex-col items-center justify-center gap-1">
-                        <span className="font-medium">
-                          {presentation.label}
-                        </span>
-                        {presentation.remaining !== null && (
-                          <span className="text-xs text-gray-700">
-                            {presentation.remaining === 0
-                              ? "Paid in full"
-                              : `Remaining: ${presentation.remaining}`}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                  );
-                })}
-
-                <td className="border px-2 py-1">
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder={`${calculateMonthlyFee(student)}`}
-                    value={amounts[student.id] || ""}
-                    onChange={(e) =>
-                      handleInputChange(student.id, e.target.value)
-                    }
-                    className="border p-1 w-28 rounded"
-                  />
-                </td>
-
-                <td className="border px-2 py-1">
-                  <button
-                    onClick={() => handleSave(student.id)}
-                    className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded"
-                  >
-                    Save
-                  </button>
-                </td>
-              </tr>
-            ))}
+                      // split and extract amount after slash
+                      const parts = billingCode.split("/");
+                      const requiredAmount = parts.length > 1 ? parts[1] : "—";
+                      return (
+                        <button
+                          onClick={() => handleOpenPayment(student)}
+                          className="w-full px-3 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100"
+                        >
+                          {requiredAmount !== "—"
+                            ? requiredAmount
+                            : "Required amount"}
+                        </button>
+                      );
+                    })()}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
 
-      {/* Mobile card list (visible on small screens) */}
-      <div className="md:hidden space-y-4">
-        {students.length === 0 && (
-          <div className="text-center p-4 text-gray-500">
-            No students found.
-          </div>
-        )}
+      {/********************  mobile view **********************/}
 
-        {students.map((student) => (
-          <div
-            key={student.id ?? student.student_id}
-            className="border rounded-lg p-4 bg-white shadow-sm"
-          >
-            <div className="flex items-start justify-between">
-              <div>
-                <div className="text-sm text-gray-500">ID: {student.id}</div>
-                <div className="text-lg font-semibold">
+      <div className="space-y-4 md:hidden">
+        {students.map((student, index) => {
+          const studentId =
+            student.id ?? student.student_id ?? student.user_id ?? index;
+          const classLabel =
+            student.class_pair ||
+            student.group?.class_pair ||
+            student.group?.class_pair_compact ||
+            "—";
+
+          return (
+            <div
+              key={studentId}
+              className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
+            >
+              <div className="flex flex-wrap justify-between gap-2 text-sm">
+                <div>
+                  <p className="text-xs uppercase text-gray-500">ID</p>
+                  <p className="font-medium text-gray-800">{studentId}</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase text-gray-500">Wallet</p>
+                  <p className=" font-medium text-gray-800">
+                    {formatWallet(resolveWallet(student))}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-3 text-sm text-gray-700">
+                <p className="font-medium">
                   {student.full_name || student.name || "—"}
-                </div>
-                <div className="text-sm text-gray-500">
-                  {student.class_pair ||
-                    student.group?.class_pair ||
-                    student.group?.class_pair_compact ||
-                    ""}
-                </div>
-                <div className="text-sm text-gray-500 mt-1">
-                  Wallet:{" "}
-                  {formatWallet(
-                    student.wallet_balance,
-                    student.wallet_currency
-                  )}
-                </div>
+                </p>
+                <p className="text-xs uppercase text-gray-500">Class</p>
+                <p>{classLabel}</p>
               </div>
-              <div className="text-right">
-                <div className="text-sm text-gray-500">Amount</div>
-                <div className="mt-1">
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder={`${calculateMonthlyFee(student)}`}
-                    value={amounts[student.id] || ""}
-                    onChange={(e) =>
-                      handleInputChange(student.id, e.target.value)
-                    }
-                    className="border p-1 w-28 rounded"
-                  />
-                </div>
-                <div className="mt-2">
-                  <button
-                    onClick={() => handleSave(student.id)}
-                    className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded"
-                  >
-                    Save
-                  </button>
-                </div>
-              </div>
-            </div>
 
-            <div className="mt-3 flex flex-wrap gap-2">
-              {monthItems.map((month) => {
-                const payment = student.payments?.[month.key];
-                const presentation = getPaymentPresentation(payment);
-                return (
-                  <div
-                    key={month.key}
-                    className={`px-2 py-1 text-xs rounded-full ${
-                      presentation.isPaid
-                        ? "bg-green-200 text-green-800"
-                        : "bg-red-200 text-red-800"
-                    }`}
-                  >
-                    {month.label.slice(0, 3)}: {presentation.label}
+              {monthNames.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-xs uppercase text-gray-500">Months</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {monthNames.map((month) => {
+                      const paymentForMonth = findPaymentForMonth(
+                        student,
+                        month
+                      );
+
+                      return (
+                        <span
+                          key={month.key}
+                          className="flex flex-col rounded border border-dashed border-gray-300 px-2 py-2 text-xs text-gray-600"
+                        >
+                          <span className="font-medium text-gray-700">
+                            {month.label}
+                          </span>
+                          <span
+                            className={`mt-1 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${getStatusClasses(
+                              paymentForMonth?.status
+                            )}`}
+                          >
+                            {paymentForMonth?.status ?? "—"}
+                          </span>
+                        </span>
+                      );
+                    })}
                   </div>
-                );
-              })}
+                </div>
+              )}
+              <div className="mt-4 flex flex-row items-center gap-3">
+                {(() => {
+                  // get billing_code safely
+                  const billingCode =
+                    student.billing_code ||
+                    student.payments[0]?.billing_code ||
+                    "";
+
+                  // split and extract amount after slash
+                  const parts = billingCode.split("/");
+                  const requiredAmount = parts.length > 1 ? parts[1] : "—";
+                  return (
+                    <button
+                      onClick={() => handleOpenPayment(student)}
+                      className="w-full px-3 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100"
+                    >
+                      {requiredAmount !== "—"
+                        ? requiredAmount
+                        : "Required amount"}
+                    </button>
+                  );
+                })()}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
-
-      <div ref={sentinelRef} />
-
-      {hasMore && (
-        <div className="py-4 text-center text-gray-500">
-          {loadingMore ? "Loading more students..." : "Scroll to load more"}
+      <div ref={sentinelRef} className="h-2" />
+      {loadingMore && (
+        <div className="w-full py-4 text-center text-sm text-gray-500">
+          Loading more students...
         </div>
       )}
-
-      {!hasMore && students.length > 0 && (
-        <div className="py-4 text-center text-gray-400">
-          You've reached the end.
+      {!hasMore && !loadingMore && (
+        <div className="w-full py-4 text-center text-xs text-gray-400">
+          No more students to load.
         </div>
+      )}
+      {openPayment && selectedStudent && (
+        <PaymentModule
+          open={openPayment}
+          studentName={
+            selectedStudent?.full_name || selectedStudent?.name || ""
+          }
+          amount={paymentData.amount}
+          method={paymentData.method}
+          date={paymentData.date}
+          error={errorMsg}
+          submitting={submitting}
+          onClose={handleClosePayment}
+          onChange={handleChangePayment}
+          onSubmit={handleSubmitPayment}
+        />
       )}
     </div>
   );
 }
+
+export default PaymentsTable;

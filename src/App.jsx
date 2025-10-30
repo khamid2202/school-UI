@@ -6,7 +6,7 @@ import LandingPage from "./Pages/admin/LandingPage/LandingPage";
 import LayoutWithHeader from "./Layouts/Layout";
 import ProtectedRoute from "./Pages/auth/ProtectedRoute";
 import { Payments } from "./Pages/admin/PaymentPage/Payments";
-import Configuration from "./Pages/admin/StudentSetting/Configuration";
+import Configuration from "./Pages/admin/ManagementPage/Configuration";
 import Classes from "./Pages/admin/Groups/Classes";
 import Teachers from "./Pages/admin/Teachers/Teachers";
 import Scores from "./Pages/admin/Scoring/Scoring";

@@ -128,6 +128,7 @@ export default function TuitionPayments({
           error={error}
           hasMore={hasMore}
           onLoadMore={onLoadMore}
+          paymentPurposePrefix="tuition"
         />
       </div>
     </div>
