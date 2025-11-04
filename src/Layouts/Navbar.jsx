@@ -48,7 +48,7 @@ function Navbar({ isExpanded, setIsExpanded }) {
       label: "Payment",
     },
     { to: "/teachers", icon: <Users size={20} />, label: "Tutors" },
-    { to: "/scores", icon: <BarChart2 size={20} />, label: "Scoring" },
+    { to: "/classes-for-scoring", icon: <BarChart2 size={20} />, label: "Scoring" },
   ];
 
   const handleLogOut = () => {
@@ -80,10 +80,10 @@ function Navbar({ isExpanded, setIsExpanded }) {
     <>
       <nav
         className={`hidden md:flex flex-row justify-between bg-white border-r border-gray-200 h-screen shadow-md fixed left-0 top-0 z-40 transition-all duration-300 ${
-          isExpanded ? "w-40" : "w-20"
+          isExpanded ? "w-56" : "w-20"
         }`}
       >
-        <div className="flex flex-col   h-full w-full relative">
+        <div className="flex flex-col h-full w-full relative ">
           {/* Collapse / Expand Button */}
           <div
             className="absolute -right-3 top-1/2 -translate-y-1/2 z-50"
@@ -107,8 +107,8 @@ function Navbar({ isExpanded, setIsExpanded }) {
           {/* Top Section */}
 
           {/* Logo Section */}
-          <div className="flex flex-col items-center gap-1 px-5 py-6 border-b ">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-lg font-bold">
+          <div className="flex flex-row justify-center items-center gap-1 px-0 py-6 border-b ">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex justify-center items-center text-white text-lg font-bold">
               {firstLetter}
             </div>
             {isExpanded && (
@@ -126,7 +126,7 @@ function Navbar({ isExpanded, setIsExpanded }) {
               <Link
                 key={item.to}
                 to={item.to}
-                className={`flex justify-center items-center gap-3 py-4 mx-3 rounded-xl transition-all ${
+                className={`flex items-center gap-3 pl-4 py-4 mx-3 rounded-xl transition-all ${
                   isActive(item.to)
                     ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-md"
                     : "text-gray-600 hover:bg-gray-100 hover:text-indigo-600"
@@ -142,7 +142,7 @@ function Navbar({ isExpanded, setIsExpanded }) {
           <div className="p-4 border-t flex justify-between items-center mt-auto">
             {/* Settings Button */}
             <button
-              className="w-full px-3 py-2 rounded-xl bg-gradient-to-r from-gray-200 to-gray-300 text-gray-700 font-semibold hover:from-gray-300 hover:to-gray-400 transition flex items-center justify-center"
+              className="w-full px-3 py-2 rounded-xl bg-gradient-to-r from-gray-200 to-gray-300 text-gray-700 font-semibold hover:from-gray-300 hover:to-gray-400 transition flex items-center pl-4"
               onClick={() => setShowSettings((prev) => !prev)}
             >
               <Settings size={18} className="" />
@@ -155,7 +155,7 @@ function Navbar({ isExpanded, setIsExpanded }) {
                 className={`bg-white absolute left-0 bottom-16 w-full  border border-gray-200 rounded-xl shadow-lg py-1 px-1 z-50 flex flex-col items-center`}
               >
                 <button
-                  className="w-11/12 flex items-center gap-2 px-4 py-1 rounded-lg hover:bg-gray-100 transition text-gray-700"
+                  className="w-11/12 flex items-center pl-4 gap-2 px-4 py-1 rounded-lg hover:bg-gray-100 transition text-gray-700"
                   onClick={handleLogOut}
                 >
                   <LogOut size={18} />
@@ -183,7 +183,7 @@ function Navbar({ isExpanded, setIsExpanded }) {
                 <Link
                   key={item.to}
                   to={item.to}
-                  className={`flex flex-col items-center justify-center text-xs gap-1 w-1/6 py-1 transition`}
+                  className={`flex flex-col  items-center justify-center text-xs gap-1 w-1/6 py-1 transition`}
                 >
                   <div
                     className={`p-2 rounded-lg ${

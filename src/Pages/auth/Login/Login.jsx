@@ -151,7 +151,7 @@ const Login = () => {
                 disabled={loading}
               >
                 {loading ? (
-                  <>
+                  <div className="flex items-center justify-center" >
                     <svg
                       className="animate-spin h-5 w-5 mr-2 text-white"
                       xmlns="http://www.w3.org/2000/svg"
@@ -173,7 +173,7 @@ const Login = () => {
                       ></path>
                     </svg>
                     Signing in...
-                  </>
+                  </div>
                 ) : (
                   "Sign in"
                 )}

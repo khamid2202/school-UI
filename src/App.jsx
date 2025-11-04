@@ -11,6 +11,7 @@ import Classes from "./Pages/admin/Groups/Classes";
 import Teachers from "./Pages/admin/Teachers/Teachers";
 import Scores from "./Pages/admin/Scoring/Scoring";
 import ClassManagement from "./Pages/admin/Groups/ClassManagement";
+import ClassesForScoring from "./Pages/admin/Scoring/ClassesForScoring";
 
 // import "./index.css";
 
@@ -34,6 +35,7 @@ function App() {
           <Route path="/classes" element={<Classes />} />
           <Route path="/class-management" element={<ClassManagement />} />
           <Route path="/teachers" element={<Teachers />} />
+          <Route path="/classes-for-scoring" element={<ClassesForScoring />} />
           <Route path="/scores" element={<Scores />} />
         </Route>
       </Routes>
