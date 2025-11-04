@@ -24,7 +24,37 @@ function LandingPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <div className="flex-1 p-6">
-        <h1 className="text-2xl font-bold">Dashboard Content</h1>
+        <h1 className="text-2xl font-bold">Latest News from LangApex</h1>
+        <div className="mt-4 gap-1 md:grid md:grid-cols-2 flex flex-col ">
+        <iframe
+        className="mb-4 rounded-xl w-full h-80"
+        src="https://www.youtube.com/embed/SjQQTk8NVBI"
+        title="LangApex"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+      ></iframe>
+      <iframe
+        className="mb-4 rounded-xl w-full h-80"
+        src="https://www.youtube.com/embed/Vl7Dczy0syY"
+        title="LangApex"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+      ></iframe>
+       <iframe
+        className="mb-4 rounded-xl w-full h-80"
+        src="https://www.youtube.com/embed/19mMjXTwkFc"
+        title="LangApex"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+      ></iframe>
+      <iframe
+        className="mb-4 rounded-xl w-full h-80"
+        src="https://www.youtube.com/embed/ywAM09I_OYM"
+        title="LangApex"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+      ></iframe>
+        </div>
       </div>
     </div>
   );

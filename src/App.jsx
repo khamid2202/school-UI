@@ -1,7 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Auth from "./Pages/auth/Auth";
 import Login from "./Pages/auth/Login/Login";
-import Dashboard from "./Pages/admin/Dashboard/Dashboard";
 import LandingPage from "./Pages/admin/LandingPage/LandingPage";
 import LayoutWithHeader from "./Layouts/Layout";
 import ProtectedRoute from "./Pages/auth/ProtectedRoute";
@@ -12,8 +11,6 @@ import Teachers from "./Pages/admin/Teachers/Teachers";
 import Scores from "./Pages/admin/Scoring/Scoring";
 import ClassManagement from "./Pages/admin/Groups/ClassManagement";
 import ClassesForScoring from "./Pages/admin/Scoring/ClassesForScoring";
-
-// import "./index.css";
 
 function App() {
   return (
