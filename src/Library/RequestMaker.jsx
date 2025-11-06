@@ -12,7 +12,7 @@ const withConfig = (config = {}) => ({
   ...config,
   headers: {
     "Content-Type": "application/json",
-    ...(config.headers || {}),
+    ...(config?.headers || {}),
   },
 });
 
@@ -22,10 +22,19 @@ export const api = {
 
   post: (url, data, config) => requestMaker.post(url, data, withConfig(config)),
 
+  // Form uploads: allow Axios to set multipart boundaries automatically.
+  // Do NOT set Content-Type here.
+  postForm: (url, formData, config) =>
+    requestMaker.post(url, formData, {
+      ...(config || {}),
+      headers: {
+        ...(config?.headers || {}),
+      },
+    }),
+
   put: (url, data, config) => requestMaker.put(url, data, withConfig(config)),
 
-  patch: (url, data, config) =>
-    requestMaker.patch(url, data, withConfig(config)),
+  patch: (url, data, config) => requestMaker.patch(url, data, withConfig(config)),
 
   delete: (url, config) => requestMaker.delete(url, withConfig(config)),
 };
