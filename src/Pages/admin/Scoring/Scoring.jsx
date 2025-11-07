@@ -47,11 +47,11 @@ function  Scores() {
 
   return (
     <div className="p-8 bg-gray-50 min-h-screen">
-      <div className="mb-8 flex flex-col items-center justify-center">
-        <h1 className="text-3xl font-extrabold text-gray-900 mb-2 text-center">
+      <div className="mb-6">
+        <h1 className="text-2xl font-semibold text-gray-800">
           {classInfo.grade + "-" + classInfo.class} Students
         </h1>
-        <p className="text-2xl font-bold text-indigo-700 text-center">
+        <p className="text-gray-500 mt-1">
           Teacher: {classInfo.teacher}
         </p>
       </div>

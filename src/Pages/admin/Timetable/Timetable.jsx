@@ -192,9 +192,9 @@ function Timetable() {
   };
 
   return (
-    <div className="p-6 flex flex-col h-screen">
-      {/* Non-scrolling part: Header and Filters */}
-      <div className="flex-shrink-0">
+    <div className="flex flex-col h-full">
+      {/* Non-scrolling part: Header and Filters - Fixed container */}
+      <div className="flex-shrink-0 px-6 pt-6 pb-4">
         {/* Fixed header - won't be affected by table width */}
         <div className="mb-6 flex items-center justify-between gap-4">
           <div>
@@ -215,7 +215,7 @@ function Timetable() {
         </div>
 
         {/* Filters - also fixed width */}
-        <div className="bg-white border rounded-xl p-4 mb-6 shadow-sm">
+        <div className="bg-white border rounded-xl p-4 shadow-sm">
           <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-end flex-wrap">
             {/* View mode toggle */}
             <div className="flex gap-2 bg-gray-100 p-1 rounded-lg w-fit">
@@ -322,15 +322,16 @@ function Timetable() {
 
         {/* Error state */}
         {error && (
-          <div className="flex items-center gap-2 text-red-600 mb-4">
+          <div className="flex items-center gap-2 text-red-600 mt-4">
             <AlertCircle size={20} />
             <span>{error}</span>
           </div>
         )}
       </div>
 
-      {/* Scrolling part: Table */}
-      <div className="flex-1 min-h-0 overflow-auto bg-white rounded-xl shadow-sm border">
+      {/* Scrolling part: Table - Completely independent scrolling container */}
+      <div className="flex-1 px-6 pb-6 min-h-0">
+        <div className="h-full overflow-auto bg-white rounded-xl shadow-sm border">
         {loading ? (
           <table className="w-full border-collapse">
             <thead>
@@ -503,6 +504,7 @@ function Timetable() {
             </tbody>
           </table>
         )}
+        </div>
       </div>
 
       {/* Upload Modal */}

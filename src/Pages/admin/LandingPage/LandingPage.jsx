@@ -24,7 +24,14 @@ function LandingPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <div className="flex-1 p-6">
-        <h1 className="text-2xl font-bold">Latest News from LangApex</h1>
+        <div className="mb-6">
+          <h1 className="text-2xl font-semibold text-gray-800">
+            Latest News from LangApex
+          </h1>
+          <p className="text-gray-500 mt-1">
+            Watch our latest videos and updates
+          </p>
+        </div>
         <div className="mt-4 gap-1 md:grid md:grid-cols-2 flex flex-col ">
         <iframe
         className="mb-4 rounded-xl w-full h-80"
