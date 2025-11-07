@@ -219,20 +219,20 @@ function Timetable() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Non-scrolling part: Header and Filters - Fixed container */}
-      <div className="flex-shrink-0 px-6 pt-6 pb-4 w-full">
+      <div className="flex-shrink-0 px-4 md:px-6 pt-4 md:pt-6 pb-3 md:pb-4 w-full">
         {/* Fixed header - won't be affected by table width */}
-        <div className="mb-6 flex items-center justify-between gap-4">
+        <div className="mb-4 md:mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div>
-            <h1 className="text-2xl font-semibold text-gray-800">
+            <h1 className="text-xl md:text-2xl font-semibold text-gray-800">
               Timetable - {academicYear}
             </h1>
-            <p className="text-gray-500 mt-1">
+            <p className="text-sm text-gray-500 mt-1">
               Weekly schedule for all classes
             </p>
           </div>
           <button
             onClick={() => setShowUploadModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition whitespace-nowrap"
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition whitespace-nowrap w-full sm:w-auto"
           >
             <Upload size={18} />
             Upload Timetable
@@ -240,12 +240,12 @@ function Timetable() {
         </div>
 
         {/* Filters - also fixed width */}
-        <div className="bg-white border rounded-xl p-4 shadow-sm">
+        <div className="bg-white border rounded-xl p-3 md:p-4 shadow-sm">
           <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-end flex-wrap">
             {/* View mode toggle */}
-            <div className="flex gap-2 bg-gray-100 p-1 rounded-lg w-fit">
+            <div className="flex gap-2 bg-gray-100 p-1 rounded-lg w-full sm:w-fit">
               <button
-                className={`px-3 py-2 rounded-md text-sm font-medium transition ${
+                className={`flex-1 sm:flex-none px-3 py-2 rounded-md text-sm font-medium transition ${
                   viewMode === "class"
                     ? "bg-white shadow text-gray-900"
                     : "text-gray-600 hover:text-gray-900"
@@ -258,7 +258,7 @@ function Timetable() {
                 By Class
               </button>
               <button
-                className={`px-3 py-2 rounded-md text-sm font-medium transition ${
+                className={`flex-1 sm:flex-none px-3 py-2 rounded-md text-sm font-medium transition ${
                   viewMode === "teacher"
                     ? "bg-white shadow text-gray-900"
                     : "text-gray-600 hover:text-gray-900"
@@ -273,21 +273,21 @@ function Timetable() {
             </div>
 
             {/* Academic year */}
-            <div className="flex flex-col">
+            <div className="flex flex-col w-full sm:w-auto">
               <label className="text-xs text-gray-500 mb-1">
                 Academic Year
               </label>
               <input
                 value={academicYear}
                 onChange={(e) => setAcademicYear(e.target.value)}
-                className="px-3 py-2 border rounded-lg w-44 focus:ring-2 focus:ring-indigo-500 outline-none"
+                className="px-3 py-2 border rounded-lg w-full sm:w-44 focus:ring-2 focus:ring-indigo-500 outline-none"
                 placeholder="2025-2026"
               />
             </div>
 
             {/* Class or Teacher selector */}
             {viewMode === "class" ? (
-              <div className="flex flex-col min-w-56">
+              <div className="flex flex-col w-full sm:min-w-56 sm:w-auto">
                 <label className="text-xs text-gray-500 mb-1">Class</label>
                 <select
                   className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
@@ -310,7 +310,7 @@ function Timetable() {
                 </select>
               </div>
             ) : (
-              <div className="flex flex-col min-w-56">
+              <div className="flex flex-col w-full sm:min-w-56 sm:w-auto">
                 <label className="text-xs text-gray-500 mb-1">Teacher</label>
                 <select
                   className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
@@ -333,7 +333,7 @@ function Timetable() {
             )}
 
             {/* Day filter */}
-            <div className="flex flex-col">
+            <div className="flex flex-col w-full sm:w-auto">
               <label className="text-xs text-gray-500 mb-1">Day</label>
               <select
                 className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
@@ -361,7 +361,7 @@ function Timetable() {
       </div>
 
       {/* Scrolling part: Table - Completely independent scrolling container */}
-      <div className="flex-1 px-6 pb-6 min-h-0">
+      <div className="flex-1 px-4 md:px-6 pb-4 md:pb-6 min-h-0">
         <div className="h-full overflow-auto bg-white rounded-xl shadow-sm border">
           {loading ? (
             <table className="w-full border-collapse">
@@ -471,13 +471,13 @@ function Timetable() {
                     <>
                       {/* Class headers row for this day */}
                       <tr key={`${day}_classes`} className="bg-indigo-50 border-b">
-                        <td className="px-4 py-2 text-sm font-semibold text-gray-800 border-r sticky left-0 bg-indigo-50 z-10">
+                        <td className="px-3 md:px-4 py-2 text-xs md:text-sm font-semibold text-gray-800 border-r sticky left-0 bg-indigo-50 z-10 whitespace-nowrap">
                           {day}
                         </td>
                         {classesSorted.map((cls) => (
                           <td
                             key={`${day}_class_${cls.id}`}
-                            className="px-4 py-2 text-center text-sm font-semibold text-gray-800 border-r bg-indigo-50 whitespace-nowrap"
+                            className="px-3 md:px-4 py-2 text-center text-xs md:text-sm font-semibold text-gray-800 border-r bg-indigo-50 whitespace-nowrap"
                           >
                             {cls.class_pair}
                           </td>
@@ -490,7 +490,7 @@ function Timetable() {
                           className="border-b hover:bg-gray-50/50"
                         >
                       {/* Period column */}
-                      <td className="px-4 py-3 text-sm text-gray-600 border-r sticky left-0 bg-white whitespace-nowrap">
+                      <td className="px-2 md:px-4 py-2 md:py-3 text-xs md:text-sm text-gray-600 border-r sticky left-0 bg-white whitespace-nowrap">
                         <div className="font-medium">{timeSlot.slot}</div>
                       </td>
 
@@ -501,7 +501,7 @@ function Timetable() {
                         return (
                           <td
                             key={`cell-${key}`}
-                            className="px-3 py-2 text-sm border-r align-top"
+                            className="px-2 md:px-3 py-2 text-xs md:text-sm border-r align-top min-w-[140px] md:min-w-[180px]"
                           >
                             {lesson ? (
                               <div className="space-y-1">
@@ -537,17 +537,17 @@ function Timetable() {
       {/* Upload Modal */}
       {showUploadModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b">
-              <h2 className="text-xl font-semibold text-gray-800">
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto mx-4">
+            <div className="p-4 md:p-6 border-b">
+              <h2 className="text-lg md:text-xl font-semibold text-gray-800">
                 Upload Timetable
               </h2>
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-xs md:text-sm text-gray-500 mt-1">
                 Upload an Excel file with timetable data
               </p>
             </div>
 
-            <div className="p-6 space-y-4">
+            <div className="p-4 md:p-6 space-y-4">
               {/* File input */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -579,7 +579,7 @@ function Timetable() {
               </div>
 
               {/* Date range */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Start Date <span className="text-red-500">*</span>
@@ -637,7 +637,7 @@ function Timetable() {
             </div>
 
             {/* Footer */}
-            <div className="p-6 border-t flex justify-end gap-3">
+            <div className="p-4 md:p-6 border-t flex flex-col sm:flex-row justify-end gap-3">
               <button
                 onClick={() => {
                   setShowUploadModal(false);
@@ -648,7 +648,7 @@ function Timetable() {
                   setUploadResult(null);
                 }}
                 disabled={uploading}
-                className="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-50 transition disabled:opacity-50"
+                className="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-50 transition disabled:opacity-50 order-2 sm:order-1"
               >
                 Cancel
               </button>
@@ -657,7 +657,7 @@ function Timetable() {
                 disabled={
                   !file || !uploadAcademicYear || !startDate || uploading
                 }
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2"
               >
                 {uploading ? (
                   <>
