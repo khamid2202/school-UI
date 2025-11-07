@@ -3,14 +3,19 @@ import { api } from "../../../Library/RequestMaker.jsx";
 import { endpoints } from "../../../Library/Endpoints.jsx";
 import { Loader2, AlertCircle, Upload } from "lucide-react";
 
-const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const DAYS = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+];
 const DAY_MAP = {
   Monday: 1,
   Tuesday: 2,
   Wednesday: 3,
   Thursday: 4,
   Friday: 5,
-  Saturday: 6,
 };
 
 function Timetable() {
@@ -90,7 +95,24 @@ function Timetable() {
 
         const timetableRes = await api.get(endpoints.TIMETABLES, params);
         const timetables = timetableRes.data?.timetables || [];
-        setTimetableData(timetables);
+        const today = new Date();
+        const filteredTimetables = timetables.filter((item) => {
+          return item.end_date ? new Date(item.end_date) >= today : true;
+        });
+        
+        // Transform data: add missing fields that backend doesn't provide
+        const transformedData = filteredTimetables.map((item) => ({
+          ...item,
+          // Add day_index if missing
+          day_index: item.day_index || DAY_MAP[item.day],
+          // Add time_id: create unique ID from time_slot
+          time_id: item.time_id || `${item.start_time}-${item.end_time}`,
+          // Add group_id: use the lesson id or create from grade+class
+          group_id: item.group_id || `${item.grade}-${item.class}`,
+        }));
+        
+        console.log("filteredTimetables:", transformedData);
+        setTimetableData(transformedData);
       } catch (err) {
         console.error(err);
         setError("Failed to load timetable data");
@@ -172,7 +194,7 @@ function Timetable() {
 
       const res = await api.postForm(endpoints.TIMETABLES_UPLOAD, formData);
       setUploadResult(res.data || res);
-      
+
       // Refresh timetable data after successful upload
       setTimeout(() => {
         setShowUploadModal(false);
@@ -185,16 +207,19 @@ function Timetable() {
       }, 2000);
     } catch (err) {
       console.error(err);
-      setUploadError(err.response?.data?.message || "Upload failed. Please check the file format.");
+      setUploadError(
+        err.response?.data?.message ||
+          "Upload failed. Please check the file format."
+      );
     } finally {
       setUploading(false);
     }
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-hidden">
       {/* Non-scrolling part: Header and Filters - Fixed container */}
-      <div className="flex-shrink-0 px-6 pt-6 pb-4">
+      <div className="flex-shrink-0 px-6 pt-6 pb-4 w-full">
         {/* Fixed header - won't be affected by table width */}
         <div className="mb-6 flex items-center justify-between gap-4">
           <div>
@@ -249,7 +274,9 @@ function Timetable() {
 
             {/* Academic year */}
             <div className="flex flex-col">
-              <label className="text-xs text-gray-500 mb-1">Academic Year</label>
+              <label className="text-xs text-gray-500 mb-1">
+                Academic Year
+              </label>
               <input
                 value={academicYear}
                 onChange={(e) => setAcademicYear(e.target.value)}
@@ -271,7 +298,9 @@ function Timetable() {
                   {groups
                     .slice()
                     .sort((a, b) =>
-                      `${a.grade}-${a.class}`.localeCompare(`${b.grade}-${b.class}`)
+                      `${a.grade}-${a.class}`.localeCompare(
+                        `${b.grade}-${b.class}`
+                      )
                     )
                     .map((g) => (
                       <option key={g.id} value={g.id}>
@@ -291,7 +320,9 @@ function Timetable() {
                   <option value="">Select a teacher</option>
                   {teachers
                     .slice()
-                    .sort((a, b) => (a.full_name || "").localeCompare(b.full_name || ""))
+                    .sort((a, b) =>
+                      (a.full_name || "").localeCompare(b.full_name || "")
+                    )
                     .map((t) => (
                       <option key={t.id} value={t.id}>
                         {t.full_name}
@@ -332,178 +363,174 @@ function Timetable() {
       {/* Scrolling part: Table - Completely independent scrolling container */}
       <div className="flex-1 px-6 pb-6 min-h-0">
         <div className="h-full overflow-auto bg-white rounded-xl shadow-sm border">
-        {loading ? (
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="bg-gray-50 border-b">
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 border-r sticky left-0 bg-gray-50 z-10">
-                  Day
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 border-r sticky left-[100px] bg-gray-50 z-10">
-                  Period
-                </th>
-                {/* Skeleton class headers - show 1 if class selected, otherwise 6 */}
-                {Array.from({ length: selectedGroupId ? 1 : 6 }).map((_, i) => (
-                  <th
-                    key={i}
-                    className="px-4 py-3 text-center text-sm font-semibold text-gray-700 border-r min-w-[180px]"
-                  >
-                    <div className="h-5 bg-gray-200 rounded animate-pulse mx-auto w-16"></div>
+          {loading ? (
+            <table className="w-full border-collapse">
+              <thead className="sticky top-0 z-20">
+                <tr className="bg-gray-50 border-b">
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 border-r sticky left-0 bg-gray-50 z-30">
+                    Day
                   </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {/* Skeleton rows - show 1 day if day filter, otherwise 6 days */}
-              {Array.from({ length: dayFilter === "all" ? 6 : 1 }).map((_, dayIdx) => {
-                return Array.from({ length: 6 }).map((_, slotIdx) => (
-                  <tr
-                    key={`skeleton_${dayIdx}_${slotIdx}`}
-                    className="border-b"
-                  >
-                    {/* Day column - only show on first time slot */}
-                    {slotIdx === 0 ? (
-                      <td
-                        rowSpan={6}
-                        className="px-4 py-3 text-sm font-medium text-gray-700 border-r align-top sticky left-0 bg-white"
-                      >
-                        <div className="h-5 bg-gray-200 rounded animate-pulse w-20"></div>
-                      </td>
-                    ) : null}
-
-                    {/* Period column */}
-                    <td className="px-4 py-3 text-sm text-gray-600 border-r sticky left-[100px] bg-white">
-                      <div className="h-5 bg-gray-200 rounded animate-pulse w-24"></div>
-                    </td>
-
-                    {/* Class cells - show 1 if class selected, otherwise 6 */}
-                    {Array.from({ length: selectedGroupId ? 1 : 6 }).map((_, cellIdx) => (
-                      <td
-                        key={cellIdx}
-                        className="px-3 py-2 text-sm border-r align-top"
-                      >
-                        <div className="space-y-1">
-                          <div className="h-4 bg-gray-200 rounded animate-pulse w-full"></div>
-                          <div className="h-3 bg-gray-200 rounded animate-pulse w-3/4"></div>
-                          <div className="h-3 bg-gray-200 rounded animate-pulse w-1/2"></div>
-                        </div>
-                      </td>
-                    ))}
-                  </tr>
-                ));
-              })}
-            </tbody>
-          </table>
-        ) : classesSorted.length === 0 || timeSlots.length === 0 ? (
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="bg-gray-50 border-b">
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 border-r sticky left-0 bg-gray-50 z-10">
-                  Day
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 border-r sticky left-[100px] bg-gray-50 z-10">
-                  Period
-                </th>
-                {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <th
-                    key={i}
-                    className="px-4 py-3 text-center text-sm font-semibold text-gray-700 border-r min-w-[180px]"
-                  >
-                    <div className="h-5 w-16 mx-auto"></div>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 border-r sticky left-[100px] bg-gray-50 z-30">
+                    Period
                   </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td colSpan={8} className="px-8 py-16 text-center">
-                  <div className="text-gray-500">
-                    {viewMode === "teacher" && !selectedTeacherId
-                      ? "Select a teacher to view their schedule"
-                      : `No timetable data available for ${academicYear}`}
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        ) : (
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="bg-gray-50 border-b">
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 border-r sticky left-0 bg-gray-50 z-10">
-                  Day
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 border-r sticky left-[100px] bg-gray-50 z-10">
-                  Period
-                </th>
-                {classesSorted.map((cls) => (
-                  <th
-                    key={cls.id}
-                    className="px-4 py-3 text-center text-sm font-semibold text-gray-700 border-r min-w-[180px]"
-                  >
-                    {cls.class_pair}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {(dayFilter === "all" ? DAYS : [dayFilter]).map((day) => {
-                const dayIndex = DAY_MAP[day];
-                return timeSlots.map((timeSlot, slotIdx) => (
-                  <tr
-                    key={`${day}_${timeSlot.id}`}
-                    className="border-b hover:bg-gray-50/50"
-                  >
-                    {/* Day column - only show on first time slot of the day */}
-                    {slotIdx === 0 ? (
-                      <td
-                        rowSpan={timeSlots.length}
-                        className="px-4 py-3 text-sm font-medium text-gray-700 border-r align-top sticky left-0 bg-white"
+                  {/* Skeleton class headers - show 1 if class selected, otherwise 6 */}
+                  {Array.from({ length: selectedGroupId ? 1 : 6 }).map(
+                    (_, i) => (
+                      <th
+                        key={`skeleton-header-${i}`}
+                        className="px-4 py-3 text-center text-sm font-semibold text-gray-700 border-r min-w-[180px]"
                       >
-                        {day}
-                      </td>
-                    ) : null}
+                        <div className="h-5 bg-gray-200 rounded animate-pulse mx-auto w-16"></div>
+                      </th>
+                    )
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {/* Skeleton rows - show 1 day if day filter, otherwise 6 days */}
+                {Array.from({ length: dayFilter === "all" ? 6 : 1 }).map(
+                  (_, dayIdx) =>
+                    Array.from({ length: 6 }).map((_, slotIdx) => (
+                      <tr
+                        key={`skeleton_${dayIdx}_${slotIdx}`}
+                        className="border-b"
+                      >
+                        {/* Day column - only show on first time slot */}
+                        {slotIdx === 0 ? (
+                          <td
+                            rowSpan={6}
+                            className="px-4 py-3 text-sm font-medium text-gray-700 border-r align-top sticky left-0 bg-white"
+                          >
+                            <div className="h-5 bg-gray-200 rounded animate-pulse w-20"></div>
+                          </td>
+                        ) : null}
 
-                    {/* Period column */}
-                    <td className="px-4 py-3 text-sm text-gray-600 border-r sticky left-[100px] bg-white">
-                      <div className="font-medium">{timeSlot.slot}</div>
-                    </td>
-
-                    {/* Class cells */}
-                    {classesSorted.map((cls) => {
-                      const key = `${dayIndex}_${timeSlot.id}_${cls.id}`;
-                      const lesson = gridData.get(key);
-                      return (
-                        <td
-                          key={cls.id}
-                          className="px-3 py-2 text-sm border-r align-top"
-                        >
-                          {lesson ? (
-                            <div className="space-y-1">
-                              <div className="font-semibold text-gray-900">
-                                {lesson.subject}
-                              </div>
-                              <div className="text-xs text-gray-600">
-                                {lesson.teacher}
-                              </div>
-                              {lesson.room && (
-                                <div className="text-xs text-gray-500">
-                                  Room {lesson.room}
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <div className="text-gray-400 text-xs">—</div>
-                          )}
+                        {/* Period column */}
+                        <td className="px-4 py-3 text-sm text-gray-600 border-r sticky left-[100px] bg-white">
+                          <div className="h-5 bg-gray-200 rounded animate-pulse w-24"></div>
                         </td>
-                      );
-                    })}
-                  </tr>
-                ));
-              })}
-            </tbody>
-          </table>
-        )}
+
+                        {/* Class cells - show 1 if class selected, otherwise 6 */}
+                        {Array.from({ length: selectedGroupId ? 1 : 6 }).map(
+                          (_, cellIdx) => (
+                            <td
+                              key={cellIdx}
+                              className="px-3 py-2 text-sm border-r align-top"
+                            >
+                              <div className="space-y-1">
+                                <div className="h-4 bg-gray-200 rounded animate-pulse w-full"></div>
+                                <div className="h-3 bg-gray-200 rounded animate-pulse w-3/4"></div>
+                                <div className="h-3 bg-gray-200 rounded animate-pulse w-1/2"></div>
+                              </div>
+                            </td>
+                          )
+                        )}
+                      </tr>
+                    ))
+                )}
+              </tbody>
+            </table>
+          ) : classesSorted.length === 0 || timeSlots.length === 0 ? (
+            <table className="w-full border-collapse">
+              <thead className="sticky top-0 z-20">
+                <tr className="bg-gray-50 border-b">
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 border-r sticky left-0 bg-gray-50 z-30">
+                    Day
+                  </th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 border-r sticky left-[100px] bg-gray-50 z-30">
+                    Period
+                  </th>
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <th
+                      key={`empty-header-${i}`}
+                      className="px-4 py-3 text-center text-sm font-semibold text-gray-700 border-r min-w-[180px]"
+                    >
+                      <div className="h-5 w-16 mx-auto"></div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td colSpan={8} className="px-8 py-16 text-center">
+                    <div className="text-gray-500">
+                      {viewMode === "teacher" && !selectedTeacherId
+                        ? "Select a teacher to view their schedule"
+                        : `No timetable data available for ${academicYear}`}
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          ) : (
+            <table className="w-full border-collapse">
+              <tbody>
+                {(dayFilter === "all" ? DAYS : [dayFilter]).map((day) => {
+                  const dayIndex = DAY_MAP[day];
+                  return (
+                    <>
+                      {/* Class headers row for this day */}
+                      <tr key={`${day}_classes`} className="bg-indigo-50 border-b">
+                        <td className="px-4 py-2 text-sm font-semibold text-gray-800 border-r sticky left-0 bg-indigo-50 z-10">
+                          {day}
+                        </td>
+                        {classesSorted.map((cls) => (
+                          <td
+                            key={`${day}_class_${cls.id}`}
+                            className="px-4 py-2 text-center text-sm font-semibold text-gray-800 border-r bg-indigo-50 whitespace-nowrap"
+                          >
+                            {cls.class_pair}
+                          </td>
+                        ))}
+                      </tr>
+                      {/* Time slot rows */}
+                      {timeSlots.map((timeSlot, slotIdx) => (
+                        <tr
+                          key={`${day}_${timeSlot.id}`}
+                          className="border-b hover:bg-gray-50/50"
+                        >
+                      {/* Period column */}
+                      <td className="px-4 py-3 text-sm text-gray-600 border-r sticky left-0 bg-white whitespace-nowrap">
+                        <div className="font-medium">{timeSlot.slot}</div>
+                      </td>
+
+                      {/* Class cells */}
+                      {classesSorted.map((cls) => {
+                        const key = `${dayIndex}_${timeSlot.id}_${cls.id}`;
+                        const lesson = gridData.get(key);
+                        return (
+                          <td
+                            key={`cell-${key}`}
+                            className="px-3 py-2 text-sm border-r align-top"
+                          >
+                            {lesson ? (
+                              <div className="space-y-1">
+                                <div className="font-semibold text-gray-900">
+                                  {lesson.subject}
+                                </div>
+                                <div className="text-xs text-gray-600">
+                                  {lesson.teacher}
+                                </div>
+                                {lesson.room && (
+                                  <div className="text-xs text-gray-500">
+                                    Room {lesson.room}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="text-gray-400 text-xs">—</div>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                    </>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
 
@@ -512,7 +539,9 @@ function Timetable() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b">
-              <h2 className="text-xl font-semibold text-gray-800">Upload Timetable</h2>
+              <h2 className="text-xl font-semibold text-gray-800">
+                Upload Timetable
+              </h2>
               <p className="text-sm text-gray-500 mt-1">
                 Upload an Excel file with timetable data
               </p>
@@ -530,7 +559,9 @@ function Timetable() {
                   onChange={(e) => setFile(e.target.files?.[0] || null)}
                   className="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer"
                 />
-                <p className="text-xs text-gray-500 mt-1">Max 2MB. .xlsx or .xls format</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Max 2MB. .xlsx or .xls format
+                </p>
               </div>
 
               {/* Academic year */}
@@ -584,11 +615,22 @@ function Timetable() {
               {/* Success */}
               {uploadResult && (
                 <div className="bg-green-50 p-4 rounded-lg">
-                  <div className="text-sm font-medium text-green-800 mb-2">Upload Successful!</div>
+                  <div className="text-sm font-medium text-green-800 mb-2">
+                    Upload Successful!
+                  </div>
                   <div className="flex gap-4 text-sm text-green-700">
-                    <div><span className="font-semibold">Inserted:</span> {uploadResult.inserted ?? 0}</div>
-                    <div><span className="font-semibold">Updated:</span> {uploadResult.updated ?? 0}</div>
-                    <div><span className="font-semibold">Skipped:</span> {uploadResult.skipped ?? 0}</div>
+                    <div>
+                      <span className="font-semibold">Inserted:</span>{" "}
+                      {uploadResult.inserted ?? 0}
+                    </div>
+                    <div>
+                      <span className="font-semibold">Updated:</span>{" "}
+                      {uploadResult.updated ?? 0}
+                    </div>
+                    <div>
+                      <span className="font-semibold">Skipped:</span>{" "}
+                      {uploadResult.skipped ?? 0}
+                    </div>
                   </div>
                 </div>
               )}
@@ -612,7 +654,9 @@ function Timetable() {
               </button>
               <button
                 onClick={handleUpload}
-                disabled={!file || !uploadAcademicYear || !startDate || uploading}
+                disabled={
+                  !file || !uploadAcademicYear || !startDate || uploading
+                }
                 className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {uploading ? (
