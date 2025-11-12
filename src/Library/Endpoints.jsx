@@ -9,6 +9,8 @@ export const endpoints = {
   REVOKE: `/auth/revoke`,
   GROUPS: `/groups?academic_year=2025-2026`,
   TEACHERS: `/users`,
+  CREATE_USER: `/users/create`,
+  UPDATE_USER: `/users/update`,
   STUDENTS: `/students`,
   CREATE_STUDENT: `/students`,
   ASSIGN_STUDENT_GROUP: `/students/assign-group`,
