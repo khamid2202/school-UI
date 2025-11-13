@@ -1,0 +1,190 @@
+/* Fixed table styling */
+.fixed-table {
+  position: fixed;
+  top: 0; /* Adjust as necessary */
+  left: 0; /* Adjust as necessary */
+  width: 100%; /* Ensure it takes full width */
+  z-index: 10; /* Ensure it is above other content */
+}
+
+/* Full width table styling for mobile */
+.full-width-table {
+  width: 100%; /* Ensure it takes full width */
+  /* Additional styles as needed */
+}
+
+/* Mobile view adjustments */
+@media (max-width: 768px) {
+  .fixed-table {
+    /* Additional mobile styles if needed */
+  }
+
+  .full-width-table {
+    /* Additional mobile styles if needed */
+  }
+
+  table {
+    width: 100%; /* Ensure table takes full width on mobile */
+    table-layout: fixed;
+    position: static;
+    overflow: hidden;
+  }
+
+  td {
+    white-space: nowrap; /* Prevent text wrapping for names */
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+/* Skeleton Loader */
+.animate-pulse {
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+/* Base spacing & utilities (tailor to your project) */
+body {
+  margin: 0;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+}
+
+/* Ensure the app uses box-sizing border-box everywhere */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* Small utility to visually separate the fixed table from page content on mobile */
+.fixed-mobile-table {
+  /* Desktop default: let the card be normal */
+  position: static;
+  margin: 0 auto;
+  max-width: 1100px;
+}
+
+/* Card content region gets its own class so we can make it scrollable inside the fixed container */
+.card-content {
+  /* When not fixed we don't need special height */
+  overflow: visible;
+}
+
+/* MOBILE: make the table-card fixed and pinned to the viewport so it "does not move at all" */
+@media (max-width: 767px) {
+  .fixed-mobile-table {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: 72px; /* keep room for the header area (adjust if your app header is taller) */
+    bottom: 72px; /* leave space for mobile bottom nav */
+    margin: 0;
+    border-radius: 0; /* full-bleed on mobile */
+    z-index: 1000;
+    box-shadow: 0 8px 24px rgba(16, 24, 40, 0.08);
+    background: rgba(255, 255, 255, 0.98);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    /* ensure the fixed card doesn't create extra page scroll */
+    overflow: hidden;
+  }
+
+  /* make the inside content scrollable while the card itself stays fixed */
+  .fixed-mobile-table .card-content {
+    /* subtract header height (CardHeader) from the available height.
+       CardHeader is roughly 56-64px depending on padding; adjust if needed */
+    height: calc(100vh - 72px - 56px); /* viewport minus top offset minus header */
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch; /* smoother momentum scroll on iOS */
+    padding-right: 12px; /* give room for scrollbar */
+  }
+
+  /* Make the table full-width and fixed to container */
+  .fixed-mobile-table table {
+    width: 100%;
+    table-layout: fixed; /* force cells to truncate instead of expanding */
+    border-collapse: collapse;
+  }
+
+  /* Make table cells more touch friendly */
+  .fixed-mobile-table td,
+  .fixed-mobile-table th {
+    padding: 10px 8px;
+    font-size: 14px;
+  }
+
+  /* Ensure inputs are full width on mobile */
+  .fixed-mobile-table input {
+    width: 100%;
+  }
+
+  /* If your page has a top header that should remain visible, ensure it has a higher z-index than the card top area.
+     The top offset 'top:72px' is there to preserve header space. If your header is sticky, adjust top accordingly. */
+}
+
+/* Page padding utility to avoid bottom navbar overlap when navbar is fixed on mobile */
+.page-content-with-fixed-nav {
+  padding-bottom: 96px; /* space for mobile bottom nav (adjust if your nav is taller) */
+}
+
+/* Minimalist skeleton style */
+.skeleton-row {
+  height: 12px;
+  background: linear-gradient(90deg, rgba(233, 232, 255, 0.6), rgba(245, 245, 255, 0.2));
+  border-radius: 6px;
+}
+
+/* small violet tint utility for hover rows */
+.hover\:bg-violet-25:hover {
+  background-color: rgba(99, 102, 241, 0.04);
+}
+
+/* Sticky first column (student names) */
+.sticky-col {
+  position: sticky;
+  left: 0;
+  background: white;
+  z-index: 5;
+}
+
+/* Table cells and inputs for cleaner minimal look */
+table.min-w-full {
+  border-collapse: collapse;
+  width: 100%;
+}
+table.min-w-full th,
+table.min-w-full td {
+  border-bottom: 1px solid rgba(15, 23, 42, 0.05);
+}
+
+/* Input visuals */
+input.bg-violet-50 {
+  background-color: #f5f3ff;
+}
+input.border-violet-100 {
+  border-color: #ede9fe;
+}
+
+/* DESKTOP: restore normal look and allow the card to flow with the document */
+@media (min-width: 768px) {
+  .fixed-mobile-table {
+    position: static;
+    border-radius: 8px;
+    box-shadow: none;
+  }
+
+  .fixed-mobile-table .card-content {
+    height: auto;
+    overflow: visible;
+  }
+}
