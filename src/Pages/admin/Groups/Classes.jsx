@@ -32,9 +32,7 @@ function Classes() {
     // Fetch all students once when component mounts and store in localStorage
     const fetchAllStudents = async () => {
       try {
-        const res = await api.get(
-          endpoints.STUDENTS + "?academic_year=2025-2026&include_group=1"
-        );
+        const res = await api.get(endpoints.STUDENTS);
         const students = res.data?.students || res.data || [];
         localStorage.setItem("AllStudents", JSON.stringify(students));
       } catch (error) {

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { data, useLocation } from "react-router-dom";
+import { Trash2 } from "lucide-react";
 import { api } from "../../../Library/RequestMaker.jsx";
 import { endpoints } from "../../../Library/Endpoints.jsx";
 import AddStudentModal from "./AddStudentModal";
@@ -10,6 +11,9 @@ function ClassManagement() {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [studentPendingDelete, setStudentPendingDelete] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [warningMessage, setWarningMessage] = useState("");
 
   // determine if current user has teacher role
   let localUser = {};
@@ -30,8 +34,9 @@ function ClassManagement() {
       const filter = encodeURIComponent(
         JSON.stringify({ class_pairs: [classPair] })
       );
-      const url = `${endpoints.STUDENTS}?academic_year=2025-2026&filter=${filter}&include_group=1`;
+      const url = `${endpoints.STUDENTS}&filter=${filter}`;
       const res = await api.get(url);
+      console.log("Fetched students for class:", res.data?.students || []);
       setStudents(res.data?.students || []);
     } catch (error) {
       console.error("Failed to fetch students:", error);
@@ -44,6 +49,49 @@ function ClassManagement() {
     if (!classInfo) return;
     fetchStudents();
   }, [classInfo, fetchStudents]);
+
+  const handleRequestDelete = (student) => {
+    setWarningMessage("");
+    setStudentPendingDelete(student);
+    setShowDeleteModal(true);
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteModal(false);
+    setStudentPendingDelete(null);
+    setWarningMessage("");
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!studentPendingDelete) return;
+
+    const walletBalance = Number(studentPendingDelete?.wallet?.uzs ?? 0);
+    if (walletBalance > 0) {
+      setWarningMessage(
+        `${studentPendingDelete.full_name} cannot be deleted while their wallet balance is ${walletBalance} UZS.`
+      );
+      return;
+    }
+
+    try {
+      await api.delete(endpoints.REMOVE_FROM_GROUP, {
+        data: {
+          student_id: Number(studentPendingDelete.student_id),
+          group_id: classInfo.id,
+        },
+      });
+
+      // ⬇️ instead of refetching:
+      setStudents((prev) =>
+        prev.filter((s) => s.student_id !== studentPendingDelete.student_id)
+      );
+    } catch (error) {
+      setWarningMessage("Failed to delete student");
+    }
+
+    setShowDeleteModal(false);
+    setStudentPendingDelete(null);
+  };
 
   if (!classInfo) {
     return <div className="p-6 text-lg">No class selected.</div>;
@@ -80,13 +128,13 @@ function ClassManagement() {
           {students.map((student) => (
             <div
               key={student.sgid || student.student_id}
-              className="bg-white rounded-2xl shadow-lg p-6 flex flex-col items-start gap-4 border border-gray-200 hover:shadow-xl transition overflow-hidden"
+              className="bg-white rounded-2xl shadow-lg p-4 flex flex-col items-start gap-2 border border-gray-200 hover:shadow-xl transition overflow-hidden"
             >
-              <div className="flex items-center justify-between w-full mb-2 min-w-0">
-                <h3 className="text-2xl font-bold text-gray-900 truncate min-w-0 overflow-hidden">
+              <div className="flex  items-center justify-between w-full mb-2 min-w-0">
+                <h3 className="text-md font-bold text-gray-900 truncate min-w-0 overflow-hidden">
                   {student.full_name}
                 </h3>
-                <span
+                {/* <span
                   className={`px-3 py-1 rounded-full text-base font-semibold flex-shrink-0 ml-3 ${
                     student.status === "active"
                       ? "bg-green-100 text-green-700"
@@ -97,22 +145,23 @@ function ClassManagement() {
                     ? student.status.charAt(0).toUpperCase() +
                       student.status.slice(1)
                     : "Unknown"}
-                </span>
+                </span> */}
               </div>
               <div className="w-full flex flex-col gap-2 text-lg">
                 <div className="flex gap-2 items-center">
                   <span className="font-medium text-gray-700">ID:</span>
                   <span className="text-gray-900">{student.student_id}</span>
                 </div>
-                <div className="flex gap-2 items-center">
-                  <span className="font-medium text-gray-700">Join Date:</span>
-                  <span className="text-gray-900">
-                    {student.join_date
-                      ? new Date(student.join_date).toLocaleDateString()
-                      : "-"}
-                  </span>
-                </div>
+                <div className="flex gap-2 items-center"></div>
               </div>
+              <button
+                type="button"
+                onClick={() => handleRequestDelete(student)}
+                className="mt-auto self-end rounded-md border border-red-200 px-2 py-1 text-sm text-red-600 hover:bg-red-50"
+                aria-label="Delete student"
+              >
+                <Trash2 className="h-4 w-4" aria-hidden="true" />
+              </button>
             </div>
           ))}
         </div>
@@ -121,12 +170,57 @@ function ClassManagement() {
       <AddStudentModal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
-        defaultClass={`${classInfo.grade}-${classInfo.class}`}
         groupId={classInfo.id}
-        onAdd={async () => {
-          await fetchStudents();
+        onAdd={(newStudent) => {
+          setStudents((prev) => [...prev, newStudent]);
         }}
       />
+
+      {showDeleteModal && studentPendingDelete && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+          onClick={handleCancelDelete}
+        >
+          <div
+            className="w-full max-w-sm rounded-lg bg-white p-6 shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2 className="text-lg font-semibold text-gray-900">
+              Delete Student
+            </h2>
+            <p className="mt-2 text-sm text-gray-600">
+              Are you sure you want to delete{" "}
+              <span className="font-medium text-gray-900">
+                {studentPendingDelete.full_name}
+              </span>
+              ? This action cannot be undone.
+            </p>
+
+            {warningMessage && (
+              <div className="mt-4 rounded-md border border-yellow-200 bg-yellow-50 px-3 py-2 text-sm text-yellow-800">
+                {warningMessage}
+              </div>
+            )}
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={handleCancelDelete}
+                className="rounded-md border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

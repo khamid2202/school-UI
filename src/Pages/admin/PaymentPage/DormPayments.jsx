@@ -1,13 +1,11 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo } from "react";
 
 import PaymentsTable from "./PaymentsTable";
 
-const DORM_FEE = 700;
-
 export const DormPayments = ({
   students,
-  setStudents,
   months,
+  billings,
   loading,
   loadingMore,
   error,
@@ -16,15 +14,31 @@ export const DormPayments = ({
   onRefresh,
   hasMore,
   onLoadMore,
+  recordPayment,
 }) => {
   const [search, setSearch] = useState("");
+
+  //seperate the dormitory billings and save to another variable
+  const dormBillings = useMemo(() => {
+    if (!Array.isArray(billings)) return [];
+    return billings.filter(
+      (billing) => billing.code && billing.code.startsWith("dorm")
+    );
+  }, [billings]);
+
+  //payment purpose is billing.code
+  const dormPaymentPurposes = useMemo(() => {
+    if (!Array.isArray(dormBillings)) return [];
+    return dormBillings.map((billing) => billing.code);
+  }, [dormBillings]);
 
   const monthItems = useMemo(() => {
     if (!Array.isArray(months)) return [];
     return months.map((month) => ({
       key: month.key ?? month.label ?? String(month),
       label: month.label ?? month.key ?? String(month),
-      month: month.month ?? null,
+      monthNumber:
+        month.monthNumber ?? month.month ?? month.month_index ?? null,
       year: month.year ?? null,
     }));
   }, [months]);
@@ -43,8 +57,6 @@ export const DormPayments = ({
       );
     });
   }, [students, search]);
-
-  const calculateMonthlyFee = useCallback(() => DORM_FEE, []);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -77,16 +89,16 @@ export const DormPayments = ({
         </div>
 
         <PaymentsTable
-          studentData={filteredStudents}
-          setStudentData={setStudents}
+          students={filteredStudents}
           months={monthItems}
-          calculateMonthlyFee={calculateMonthlyFee}
           loading={loading}
           loadingMore={loadingMore}
+          billings={dormBillings}
+          paymentPurposes={dormPaymentPurposes}
           error={error}
           hasMore={hasMore}
           onLoadMore={onLoadMore}
-          paymentPurposePrefix="dorm"
+          recordPayment={recordPayment}
         />
       </div>
     </div>

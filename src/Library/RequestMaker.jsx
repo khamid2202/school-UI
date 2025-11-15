@@ -18,7 +18,14 @@ const withConfig = (config = {}) => ({
 
 export const api = {
   get: (url, params, config) =>
-    console.log('Making GET request to:', url, 'with params:', params, 'and config:', config) || // For debugging purposes
+    console.log(
+      "Making GET request to:",
+      url,
+      "with params:",
+      params,
+      "and config:",
+      config
+    ) || // For debugging purposes
     requestMaker.get(url, { params, ...withConfig(config) }),
 
   post: (url, data, config) => requestMaker.post(url, data, withConfig(config)),
@@ -35,7 +42,8 @@ export const api = {
 
   put: (url, data, config) => requestMaker.put(url, data, withConfig(config)),
 
-  patch: (url, data, config) => requestMaker.patch(url, data, withConfig(config)),
+  patch: (url, data, config) =>
+    requestMaker.patch(url, data, withConfig(config)),
 
   delete: (url, config) => requestMaker.delete(url, withConfig(config)),
 };
