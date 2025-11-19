@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import PaymentModule from "./PaymentModule";
+import PaymentHistory from "./PaymentHistory";
 
 function PaymentsTable({
   students = [],
@@ -24,6 +25,8 @@ function PaymentsTable({
   });
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyStudent, setHistoryStudent] = useState(null);
   const sentinelRef = useRef(null);
   const allowedPurposeSet = useMemo(() => {
     if (!Array.isArray(paymentPurposes) || !paymentPurposes.length) {
@@ -153,6 +156,16 @@ function PaymentsTable({
     setPaymentPurpose("");
     setPaymentPurposeLabel("");
     setErrorMsg("");
+  };
+
+  const handleOpenHistory = (student) => {
+    setHistoryStudent(student);
+    setHistoryOpen(true);
+  };
+
+  const handleCloseHistory = () => {
+    setHistoryOpen(false);
+    setHistoryStudent(null);
   };
 
   //handle payment is here
@@ -307,6 +320,7 @@ function PaymentsTable({
               </th>
               <th className="border px-3 py-2 ">Class</th>
               <th className="border px-3 py-2 ">Wallet</th>
+              <th className="border px-3 py-2">Payment history</th>
               {months.map((month) => (
                 <th
                   key={month.key}
@@ -344,6 +358,14 @@ function PaymentsTable({
                   </td>
                   <td className="justify-center items-center border px-3 py-2 ">
                     {formatWallet(resolveWallet(student))}
+                  </td>
+                  <td className="border px-3 py-2">
+                    <button
+                      onClick={() => handleOpenHistory(student)}
+                      className="w-full rounded border border-gray-200 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
+                    >
+                      View history
+                    </button>
                   </td>
                   {months.map((month) => {
                     const paymentForMonth = findPaymentForMonth(student, month);
@@ -465,6 +487,12 @@ function PaymentsTable({
                   {/* data comes as 2600.00, need to convert to 2600 */}
                   {dueAmount ? Math.floor(Number(dueAmount)) : "Pay"}
                 </button>
+                <button
+                  onClick={() => handleOpenHistory(student)}
+                  className="px-3 py-1 rounded border border-gray-200 text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  History
+                </button>
               </div>
             </div>
           );
@@ -481,6 +509,11 @@ function PaymentsTable({
           No more students to load.
         </div>
       )}
+      <PaymentHistory
+        open={historyOpen}
+        student={historyStudent}
+        onClose={handleCloseHistory}
+      />
       {openPayment && selectedStudent && (
         <PaymentModule
           open={openPayment}
