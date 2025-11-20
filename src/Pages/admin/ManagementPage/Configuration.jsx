@@ -100,9 +100,11 @@ function Configuration() {
     const currentYear = new Date().getFullYear();
 
     try {
-      const response = await api.post(
-        endpoints.CREATE_INVOICE + `/${currentYear}/${invoiceMonth}`
-      );
+      const response = await api.post(endpoints.CREATE_INVOICE, {
+        academic_year_id: 1,
+        year: currentYear,
+        month: invoiceMonth,
+      });
 
       console.log("Invoice creation response:", response.data);
 
