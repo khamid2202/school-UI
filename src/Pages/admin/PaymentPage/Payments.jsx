@@ -20,6 +20,10 @@ export const Payments = () => {
     refresh,
     loadMore,
     recordPayment,
+    query,
+    setQuery,
+    dormQuery,
+    setDormQuery,
   } = useStudentPayments();
 
   const totalLoaded = students.length;
@@ -49,7 +53,7 @@ export const Payments = () => {
           >
             Dorm
           </button>
-          <button
+          {/* <button
             className={`px-4 py-2 rounded-md font-medium ${
               tab === "other"
                 ? "bg-indigo-600 text-white"
@@ -58,7 +62,7 @@ export const Payments = () => {
             onClick={() => setTab("other")}
           >
             Other
-          </button>
+          </button> */}
         </div>
 
         <div>
@@ -76,6 +80,8 @@ export const Payments = () => {
               onRefresh={refresh}
               onLoadMore={loadMore}
               recordPayment={recordPayment}
+              searchQuery={query}
+              onSearchChange={setQuery}
             />
           )}
           {tab === "dorm" && (
@@ -92,6 +98,8 @@ export const Payments = () => {
               onRefresh={refresh}
               onLoadMore={loadMore}
               recordPayment={recordPayment}
+              searchQuery={dormQuery}
+              onSearchChange={setDormQuery}
             />
           )}
           {tab === "other" && (

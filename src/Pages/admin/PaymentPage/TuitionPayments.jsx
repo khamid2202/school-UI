@@ -1,5 +1,5 @@
 // src/Components/PaymentPage/Payments.jsx
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 import PaymentsTable from "./PaymentsTable";
 
@@ -16,8 +16,25 @@ export default function TuitionPayments({
   onRefresh,
   onLoadMore,
   recordPayment,
+  searchQuery = "",
+  onSearchChange,
 }) {
-  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState(searchQuery);
+
+  useEffect(() => {
+    setSearchInput(searchQuery);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    if (!onSearchChange) return;
+
+    const handler = setTimeout(() => {
+      if (searchInput === searchQuery) return;
+      onSearchChange(searchInput);
+    }, 400);
+
+    return () => clearTimeout(handler);
+  }, [searchInput, searchQuery, onSearchChange]);
 
   //seperate the tuition billings and save to another variable
   const tuitionBillings = useMemo(() => {
@@ -44,21 +61,6 @@ export default function TuitionPayments({
     }));
   }, [months]);
 
-  const filteredStudents = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return students;
-    return students.filter((student) => {
-      const studentName = (
-        student.full_name ||
-        student.name ||
-        ""
-      ).toLowerCase();
-      return (
-        studentName.includes(q) || String(student.id).toLowerCase().includes(q)
-      );
-    });
-  }, [students, search]);
-
   return (
     <div className="min-h-screen flex flex-col">
       <div className="flex-1 p-6 overflow-x-auto">
@@ -66,8 +68,8 @@ export default function TuitionPayments({
           <div className="flex items-center gap-3 flex-wrap md:flex-nowrap">
             <div className="w-full md:w-1/3 text-sm text-gray-500">
               <span>
-                Showing {filteredStudents.length} of{" "}
-                {meta?.total ?? totalLoaded} students
+                Showing {students.length} of {meta?.total ?? totalLoaded}{" "}
+                students
               </span>
             </div>
 
@@ -92,8 +94,8 @@ export default function TuitionPayments({
               <input
                 type="text"
                 placeholder="Search by ID or name"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 className="border px-3 py-2 rounded w-full md:w-64"
               />
             </div>
@@ -101,7 +103,7 @@ export default function TuitionPayments({
         </div>
 
         <PaymentsTable
-          students={filteredStudents}
+          students={students}
           months={monthItems}
           billings={tuitionBillings}
           paymentPurposes={tuitionPaymentPurposes}

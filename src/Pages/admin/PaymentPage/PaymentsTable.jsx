@@ -34,6 +34,32 @@ function PaymentsTable({
     }
     return new Set(paymentPurposes);
   }, [paymentPurposes]);
+
+  //WHEN THE MODAL IS OPEN, DISABLE SCROLLING ON THE BACKGROUND
+  useEffect(() => {
+    const modalOpen = openPayment || historyOpen;
+    if (typeof document === "undefined") return undefined;
+
+    const { body } = document;
+    const root = document.documentElement;
+    const previousBodyOverflow = body.style.overflow;
+    const previousRootOverflow = root.style.overflow;
+
+    if (modalOpen) {
+      body.style.overflow = "hidden";
+      root.style.overflow = "hidden";
+    } else {
+      body.style.overflow = previousBodyOverflow || "";
+      root.style.overflow = previousRootOverflow || "";
+    }
+
+    return () => {
+      body.style.overflow = previousBodyOverflow || "";
+      root.style.overflow = previousRootOverflow || "";
+    };
+  }, [openPayment, historyOpen]);
+
+  //LOAD MORE ON SCROLL TO BOTTOM
   useEffect(() => {
     const node = sentinelRef.current;
     if (!node || !onLoadMore) return undefined;
@@ -53,6 +79,7 @@ function PaymentsTable({
     return () => observer.disconnect();
   }, [hasMore, loading, loadingMore, onLoadMore]);
 
+  //RESOLVE PAYMENT PURPOSE FOR STUDENT
   const resolvePurposeForStudent = (student) => {
     if (!student) return { code: "", amount: "", description: "" };
 
@@ -309,7 +336,7 @@ function PaymentsTable({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="">
       <div className="hidden overflow-x-auto rounded-md border border-gray-200 bg-white md:block">
         <table className="min-w-full divide-y divide-gray-200 text-sm">
           <thead>

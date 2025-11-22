@@ -160,6 +160,8 @@ export const useStudentPayments = ({ enabled = true } = {}) => {
   const [error, setError] = useState("");
   const [hasMore, setHasMore] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  const [query, setQuery] = useState("");
+  const [dormQuery, setDormQuery] = useState("");
 
   const isFetchingRef = useRef(false);
 
@@ -194,9 +196,17 @@ export const useStudentPayments = ({ enabled = true } = {}) => {
       }
 
       try {
-        const response = await api.get(endpoints.GET_STUDENT_WITH_PAYMENTS, {
-          page,
-        });
+        const sanitizedQuery = query.trim();
+        const params = { page };
+
+        if (sanitizedQuery) {
+          params.q = sanitizedQuery;
+        }
+
+        const response = await api.get(
+          endpoints.GET_STUDENT_WITH_PAYMENTS,
+          params
+        );
 
         const fetchedStudents = response.data?.students || [];
         const metaData = response.data?.meta || null;
@@ -229,7 +239,7 @@ export const useStudentPayments = ({ enabled = true } = {}) => {
         }
       }
     },
-    []
+    [query]
   );
 
   const refresh = useCallback(
@@ -252,22 +262,29 @@ export const useStudentPayments = ({ enabled = true } = {}) => {
     setMonths(buildMonthCatalog(students));
   }, [students]);
 
-  //fetch dorm students and setDormStudents state
-  useEffect(() => {
-    const fetchDormStudents = async () => {
-      try {
-        const response = await api.get(endpoints.GET_DORM_STUDENTS);
-        const fetchedDormStudents = response.data?.students || [];
+  const fetchDormStudents = useCallback(async (searchValue = "") => {
+    try {
+      const sanitizedQuery = (searchValue ?? "").trim();
+      const baseUrl = endpoints.GET_DORM_STUDENTS;
+      const requestUrl = sanitizedQuery
+        ? `${baseUrl}${baseUrl.includes("?") ? "&" : "?"}q=${encodeURIComponent(
+            sanitizedQuery
+          )}`
+        : baseUrl;
 
-        setDormStudents(fetchedDormStudents);
-      } catch (fetchError) {
-        console.error("Error fetching dorm students:", fetchError);
-        setDormStudents([]);
-      }
-    };
+      const response = await api.get(requestUrl);
+      const fetchedDormStudents = response.data?.students || [];
 
-    fetchDormStudents();
+      setDormStudents(fetchedDormStudents);
+    } catch (fetchError) {
+      console.error("Error fetching dorm students:", fetchError);
+      setDormStudents([]);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchDormStudents(dormQuery);
+  }, [dormQuery, fetchDormStudents]);
 
   const monthOptions = useMemo(() => months, [months]);
 
@@ -317,6 +334,10 @@ export const useStudentPayments = ({ enabled = true } = {}) => {
     loadMore,
     setStudents,
     recordPayment,
+    query,
+    setQuery,
+    dormQuery,
+    setDormQuery,
   };
 };
 
