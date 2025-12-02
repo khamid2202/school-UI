@@ -11,37 +11,20 @@ function Classes() {
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
 
+  //get the classes from the localStorage
+  const classesFromStorage = localStorage.getItem("classes");
   useEffect(() => {
-    const fetchClasses = async () => {
+    if (classesFromStorage) {
       try {
-        const res = await api.get(endpoints.GROUPS);
-        if (res.data?.groups) {
-          setClasses(res.data.groups);
-          setFilteredClasses(res.data.groups);
-          localStorage.setItem("classes", JSON.stringify(res.data.groups));
-        }
-      } catch (error) {
-        console.error("Failed to fetch classes:", error);
-      } finally {
+        const parsedClasses = JSON.parse(classesFromStorage);
+        setClasses(parsedClasses);
+        setFilteredClasses(parsedClasses);
         setLoading(false);
-      }
-    };
-
-    fetchClasses();
-
-    // Fetch all students once when component mounts and store in localStorage
-    const fetchAllStudents = async () => {
-      try {
-        const res = await api.get(endpoints.STUDENTS);
-        const students = res.data?.students || res.data || [];
-        localStorage.setItem("AllStudents", JSON.stringify(students));
       } catch (error) {
-        console.error("Failed to fetch all students:", error);
+        console.error("Failed to parse classes from localStorage:", error);
       }
-    };
-
-    fetchAllStudents();
-  }, []);
+    }
+  }, [classesFromStorage]);
 
   useEffect(() => {
     if (!search.trim()) {

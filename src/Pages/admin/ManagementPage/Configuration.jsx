@@ -4,6 +4,7 @@ import { api } from "../../../Library/RequestMaker";
 import { endpoints } from "../../../Library/Endpoints";
 import useStudentPayments from "../PaymentPage/hooks/useStudentPaymentsContext";
 import toast from "react-hot-toast";
+import ReusableFilter from "../../../Layouts/ReusableFilter";
 
 // minimal className joiner
 const cn = (...c) => c.filter(Boolean).join(" ");
@@ -63,6 +64,7 @@ function Configuration() {
   } = useStudentPayments({ enabled: true });
 
   const [query, setQuery] = useState("");
+  const [selectedClasses, setSelectedClasses] = useState([]);
   const [isInvoiceModalOpen, setInvoiceModalOpen] = useState(false);
   const [invoiceMonth] = useState(new Date().getMonth() + 1);
   const bottomSentinelRef = useRef(null);
@@ -80,6 +82,19 @@ function Configuration() {
     () => billings.map((b) => b?.code).filter(Boolean),
     [billings]
   );
+
+  const classOptions = useMemo(() => {
+    const seen = new Set();
+    students.forEach((student) => {
+      const classPair = student?.group?.class_pair;
+      if (typeof classPair === "string" && classPair.trim()) {
+        seen.add(classPair.trim());
+      }
+    });
+    return Array.from(seen)
+      .sort((a, b) => a.localeCompare(b))
+      .map((value) => ({ label: value, value }));
+  }, [students]);
 
   const studentHasBillingCode = (student, code) => {
     if (!code) return false;
@@ -176,19 +191,28 @@ function Configuration() {
   // Billings already provided by payments context
 
   const filtered = useMemo(() => {
-    if (!query) return students;
     const q = query.toLowerCase();
+    const hasClassFilter = Array.isArray(selectedClasses)
+      ? selectedClasses.length > 0
+      : false;
+
     return students.filter((st) => {
       const name = fullName(st).toLowerCase();
       const idStr = String(st.id ?? st._id ?? st.uuid ?? "").toLowerCase();
-      const clsPair = st?.group?.class_pair || "";
-      return (
-        name.includes(q) ||
-        idStr.includes(q) ||
-        String(clsPair).toLowerCase().includes(q)
-      );
+      const clsPair = (st?.group?.class_pair || "").trim();
+      const matchesQuery = q
+        ? name.includes(q) ||
+          idStr.includes(q) ||
+          String(clsPair).toLowerCase().includes(q)
+        : true;
+
+      const matchesClass = hasClassFilter
+        ? selectedClasses.includes(clsPair)
+        : true;
+
+      return matchesQuery && matchesClass;
     });
-  }, [students, query]);
+  }, [students, query, selectedClasses]);
 
   const handleAssignBillingCode = async (student, code, nextChecked) => {
     if (!student || !code) return;
@@ -297,6 +321,15 @@ function Configuration() {
           >
             Create invoices
           </button>
+        </div>
+        <div className="mt-2 text-sm text-gray-500">
+          <ReusableFilter
+            title="Filter by class"
+            options={classOptions}
+            selectedValues={selectedClasses}
+            onChange={setSelectedClasses}
+            placeholder="Search classes"
+          />
         </div>
       </div>
 

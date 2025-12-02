@@ -53,9 +53,9 @@ function Navbar({ isExpanded, setIsExpanded }) {
     },
     { to: "/teachers", icon: <Users size={20} />, label: "Tutors" },
     {
-      to: "/classes-for-scoring",
+      to: "/classes-to-view",
       icon: <BarChart2 size={20} />,
-      label: "Scoring",
+      label: "Scores",
     },
     { to: "/timetable", icon: <Calendar size={20} />, label: "Timetable" },
     {

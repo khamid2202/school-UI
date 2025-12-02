@@ -13,9 +13,9 @@ import { Payments } from "./Pages/admin/PaymentPage/Payments";
 import Configuration from "./Pages/admin/ManagementPage/Configuration";
 import Classes from "./Pages/admin/Groups/Classes";
 import Teachers from "./Pages/admin/Teachers/Teachers.jsx";
-import Scores from "./Pages/admin/Scoring/Scoring";
+import ClassSubjects from "./Pages/admin/ScoresForAdmin/ClassessSubjects";
 import ClassManagement from "./Pages/admin/Groups/ClassManagement";
-import ClassesForScoring from "./Pages/admin/Scoring/ClassesForScoring";
+import ClassesToView from "./Pages/admin/ScoresForAdmin/ClassesToView.jsx";
 import Timetable from "./Pages/admin/Timetable/Timetable";
 import Exams from "./Pages/admin/Exams/Exams.jsx";
 import { Toaster } from "react-hot-toast";
@@ -68,8 +68,11 @@ function App() {
           <Route path="/class-management" element={<ClassManagement />} />
           <Route path="/teachers" element={<Teachers />} />
           <Route path="/exams" element={<Exams />} />
-          <Route path="/classes-for-scoring" element={<ClassesForScoring />} />
-          <Route path="/scores" element={<Scores />} />
+          <Route path="/classes-to-view" element={<ClassesToView />} />
+          <Route
+            path="/classes-to-view/class-subjects"
+            element={<ClassSubjects />}
+          />
           <Route path="/timetable" element={<Timetable />} />
         </Route>
       </Routes>
