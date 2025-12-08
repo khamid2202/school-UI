@@ -21,6 +21,7 @@ import Exams from "./Pages/admin/Exams/Exams.jsx";
 import MyClasses from "./Pages/teacher/MyClasses/MyClasses.jsx";
 import MyLessons from "./Pages/teacher/MyClasses/MyLessons.jsx";
 import { Toaster } from "react-hot-toast";
+import Tools from "./Pages/admin/Tools/Tools";
 
 function App() {
   return (
@@ -78,6 +79,7 @@ function App() {
           <Route path="/timetable" element={<Timetable />} />
           <Route path="/home/my-classes" element={<MyClasses />} />
           <Route path="/home/my-classes/my-lessons" element={<MyLessons />} />
+          <Route path="/tools" element={<Tools />} />
         </Route>
       </Routes>
     </Router>

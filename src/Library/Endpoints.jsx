@@ -36,4 +36,7 @@ export const endpoints = {
 
   // Scores and Points
   GET_LESSON_POINTS: `/students/points`,
+  ACADEMIC_YEARS: `/academic-years`,
+  SUBJECTS: `/subjects`,
+  BILLING_CODES: `/billing/codes`,
 };

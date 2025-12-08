@@ -12,7 +12,6 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
-  ClipboardPenLine,
 } from "lucide-react";
 import { sendLogoutRequest } from "../Library/Authenticate.jsx";
 
