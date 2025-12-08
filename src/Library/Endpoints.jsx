@@ -7,7 +7,7 @@ export const endpoints = {
   VALIDATE: `/auth/validate`,
   USER: `/users/me`,
   REVOKE: `/auth/revoke`,
-  GROUPS: `/groups?academic_year=2025-2026`,
+  GROUPS: `/groups`,
   TEACHERS: `/users`,
   CREATE_USER: `/users/create`,
   UPDATE_USER: `/users/update`,
@@ -22,9 +22,9 @@ export const endpoints = {
   GET_SUBJECTS: `/subjects`,
   GET_STUDENTS_OF_CLASS: `/students?academic_year=2025-2026`,
   // Timetables
-  TIMETABLES: `/timetables`,
-  TIMETABLES_UPLOAD: `/timetables/upload`,
-  TIMETABLES_MY_LESSONS: `/timetables/my-lessons`,
+  TIMETABLES: `/timetable`,
+  TIMETABLES_UPLOAD: `/timetable/upload`,
+  TIMETABLES_MY_LESSONS: `/timetable/my-lessons`,
 
   //Dorm students
   GET_DORM_STUDENTS: `/students?academic_year=2025-2026&include_group=1&include_billings=1&filter={"billing_codes":["dorm/700"]}&sort=[{"field":"full_name"}]&include_wallet=1&include_payments=1&include_payment_history=1`,
@@ -32,8 +32,8 @@ export const endpoints = {
   REMOVE_FROM_GROUP: `/students/remove-from-group`,
 
   //Subjects
-  GET_SUBJECTS_FOR_CLASS_FROM_TIMETABLE: `/timetable`,
+  GET_DATA_FROM_TIMETABLE: `/timetable?academic_year_id=1`,
 
   // Scores and Points
-  GET_LESSON_POINTS: `/students/points/lesson`,
+  GET_LESSON_POINTS: `/students/points`,
 };

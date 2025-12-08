@@ -43,28 +43,63 @@ function Navbar({ isExpanded, setIsExpanded }) {
   const username = (user && (user.user?.username || user.username)) || "";
   const firstLetter = username ? username.charAt(0).toUpperCase() : "U";
 
-  const navItems = [
-    { to: "/home", icon: <Home size={20} />, label: "Home" },
-    { to: "/classes", icon: <BookOpen size={20} />, label: "Classes" },
-    {
-      to: "/payments",
-      icon: <CreditCard size={20} />,
-      label: "Payment",
-    },
-    { to: "/teachers", icon: <Users size={20} />, label: "Tutors" },
-    {
-      to: "/classes-to-view",
-      icon: <BarChart2 size={20} />,
-      label: "Scores",
-    },
-    { to: "/timetable", icon: <Calendar size={20} />, label: "Timetable" },
-    {
-      to: "/configuration",
-      icon: <Wrench size={20} />,
-      label: "Configuration",
-    },
-    { to: "/exams", icon: <ClipboardPenLine size={20} />, label: "Exams" },
-  ];
+  // Extract roles from user object
+  const roles = (user && (user.user?.roles || user.roles)) || [];
+  const isAdmin = roles.includes("admin");
+  const isTeacher = roles.includes("teacher");
+
+  // Filter navItems based on user role
+  const getVisibleNavItems = () => {
+    const allItems = [
+      { to: "/home", icon: <Home size={20} />, label: "Home" },
+      { to: "/classes", icon: <BookOpen size={20} />, label: "Classes" },
+      {
+        to: "/payments",
+        icon: <CreditCard size={20} />,
+        label: "Payment",
+      },
+      { to: "/teachers", icon: <Users size={20} />, label: "Tutors" },
+      {
+        to: "/classes-to-view",
+        icon: <BarChart2 size={20} />,
+        label: "Scores",
+      },
+      { to: "/timetable", icon: <Calendar size={20} />, label: "Timetable" },
+      {
+        to: "/configuration",
+        icon: <Wrench size={20} />,
+        label: "Configuration",
+      },
+      { to: "/exams", icon: <ClipboardPenLine size={20} />, label: "Exams" },
+      {
+        to: "/home/my-classes",
+        icon: <BookOpen size={20} />,
+        label: "My Classes",
+      },
+    ];
+
+    // If user is admin, show all items
+    if (isAdmin) {
+      return allItems;
+    }
+
+    // If user is only teacher (default), show only Home, My Classes, and Exams
+    if (isTeacher) {
+      return allItems.filter(
+        (item) =>
+          item.to === "/home" ||
+          item.to === "/exams" ||
+          item.to === "/home/my-classes"
+      );
+    }
+
+    // Fallback: show only Home and Exams
+    return allItems.filter(
+      (item) => item.to === "/home" || item.to === "/exams"
+    );
+  };
+
+  const navItems = getVisibleNavItems();
 
   const handleLogOut = () => {
     setShowModal(true);

@@ -8,29 +8,42 @@ function ScoreTableAdmin({
   selectedSubject = null,
 }) {
   //   console.log("lesson points in ScoreTableAdmin:", lessonPoints);
-  // build a map from lessonPoints students for quick lookup
+  // build a map from lessonPoints for quick lookup
+  // The API returns a flat array of points: { student_id, points, created_at, ... }
   // For each student, pick the most recent point entry (by created_at or date)
   const pointsMap = React.useMemo(() => {
     const map = new Map();
-    if (!lessonPoints || !Array.isArray(lessonPoints.students)) return map;
-    lessonPoints.students.forEach((st) => {
-      if (!Array.isArray(st.points) || st.points.length === 0) return;
-      // find latest entry
-      const latest = st.points.reduce((best, cur) => {
-        const bestTime = best?.created_at
-          ? new Date(best.created_at).getTime()
-          : best?.date
-          ? new Date(best.date).getTime()
+    if (!lessonPoints || !Array.isArray(lessonPoints.points)) return map;
+
+    // Group points by student_id and find the latest for each
+    const byStudent = {};
+    lessonPoints.points.forEach((pt) => {
+      const sid = String(pt.student_id);
+      if (!byStudent[sid]) {
+        byStudent[sid] = pt;
+      } else {
+        // compare timestamps to keep the latest
+        const existingTime = byStudent[sid]?.created_at
+          ? new Date(byStudent[sid].created_at).getTime()
+          : byStudent[sid]?.date
+          ? new Date(byStudent[sid].date).getTime()
           : 0;
-        const curTime = cur?.created_at
-          ? new Date(cur.created_at).getTime()
-          : cur?.date
-          ? new Date(cur.date).getTime()
+        const newTime = pt?.created_at
+          ? new Date(pt.created_at).getTime()
+          : pt?.date
+          ? new Date(pt.date).getTime()
           : 0;
-        return curTime >= bestTime ? cur : best;
-      }, st.points[0]);
-      map.set(String(st.student_id), { raw: st, latest });
+        if (newTime >= existingTime) {
+          byStudent[sid] = pt;
+        }
+      }
     });
+
+    // Convert to map
+    Object.entries(byStudent).forEach(([sid, pt]) => {
+      map.set(sid, pt);
+    });
+
     return map;
   }, [lessonPoints]);
 
@@ -71,7 +84,7 @@ function ScoreTableAdmin({
               studentsList.map((s, idx) => {
                 const key = String(s.student_id || s.studentId || s.id || idx);
                 const pt = pointsMap.get(key);
-                const display = pt && pt.latest ? pt.latest.points ?? "-" : "-";
+                const display = pt ? pt.points ?? "-" : "-";
                 return (
                   <tr
                     key={`student-row-${idx}`}

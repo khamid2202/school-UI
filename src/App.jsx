@@ -18,6 +18,8 @@ import ClassManagement from "./Pages/admin/Groups/ClassManagement";
 import ClassesToView from "./Pages/admin/ScoresForAdmin/ClassesToView.jsx";
 import Timetable from "./Pages/admin/Timetable/Timetable";
 import Exams from "./Pages/admin/Exams/Exams.jsx";
+import MyClasses from "./Pages/teacher/MyClasses/MyClasses.jsx";
+import MyLessons from "./Pages/teacher/MyClasses/MyLessons.jsx";
 import { Toaster } from "react-hot-toast";
 
 function App() {
@@ -74,6 +76,8 @@ function App() {
             element={<ClassSubjects />}
           />
           <Route path="/timetable" element={<Timetable />} />
+          <Route path="/home/my-classes" element={<MyClasses />} />
+          <Route path="/home/my-classes/my-lessons" element={<MyLessons />} />
         </Route>
       </Routes>
     </Router>

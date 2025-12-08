@@ -37,7 +37,7 @@ function ClassSubjects() {
       if (!classInfo || !classInfo.id) return;
       setLoading(true);
       try {
-        const url = `${endpoints.GET_SUBJECTS_FOR_CLASS_FROM_TIMETABLE}?academic_year_id=1&group_ids=[${classInfo.id}]`;
+        const url = `${endpoints.GET_DATA_FROM_TIMETABLE}&group_ids=[${classInfo.id}]`;
         const response = await api.get(url);
 
         const timetableEntries = response.data?.timetable || [];
@@ -49,7 +49,6 @@ function ClassSubjects() {
           if (!acc.some((subject) => subject.name === key)) {
             acc.push({
               name: key,
-              // teacher: entry.teacher || entry.created_by || "Unknown",
             });
           }
           return acc;
@@ -75,9 +74,50 @@ function ClassSubjects() {
   const [lessonPoints, setLessonPoints] = useState([]);
   const [pointsLoading, setPointsLoading] = useState(false);
 
-  // handle lesson selection
-  const handleSelectLesson = (subject) => {
+  //get alll the subjects from the localstorage
+  const allSubjects = JSON.parse(localStorage.getItem("subjects")) || [];
+
+  // handle lesson selection and fetch points
+  const handleSelectLesson = async (subject) => {
     setSelectedLesson(subject);
+    console.log("Selected lesson:", subject);
+
+    if (!classInfo || !subject) return;
+
+    // Build class pair (e.g., "4-A")
+    const classPair = classInfo.class_pair;
+
+    // Get subject ID (required for the endpoint)
+    const subjectId = allSubjects.find((sub) => sub.name === subject.name)?.id;
+
+    if (!subjectId) {
+      console.warn(
+        "Cannot fetch points: subject ID not available. Subject:",
+        subject
+      );
+      return;
+    }
+
+    setPointsLoading(true);
+    try {
+      // Build the URL: /students/points?class_pairs=["4-A"]&subject_id=9
+      const classPairsParam = encodeURIComponent(JSON.stringify([classPair]));
+      const url = `${
+        endpoints.GET_LESSON_POINTS
+      }?class_pairs=${classPairsParam}&subject_id=${encodeURIComponent(
+        subjectId
+      )}`;
+      const response = await api.get(url);
+      console.log("Lesson points response:", response);
+
+      setLessonPoints(response.data || null);
+      console.log("Fetched lesson points", response.data);
+    } catch (err) {
+      console.error("Failed to fetch lesson points", err);
+      setLessonPoints([]);
+    } finally {
+      setPointsLoading(false);
+    }
   };
 
   if (!classInfo) {
@@ -140,31 +180,48 @@ function ClassSubjects() {
               <span className="text-xs text-gray-400">Loading...</span>
             )}
           </div>
-          {subjects.length ? (
-            <div className="mt-4 flex flex-row flex-wrap gap-2 items-center">
-              {subjects.map((subject) => (
+          <div className="main flex items-center justify-between w-full mt-4">
+            {/* LEFT — SUBJECT TAGS */}
+            <div className="left flex flex-wrap gap-2 items-center max-w-[70%]">
+              {subjects.length ? (
+                subjects.map((subject) => (
+                  <button
+                    key={subject.name}
+                    type="button"
+                    className={`flex-shrink-0 px-4 py-1 rounded-full text-sm font-medium shadow-sm transition-colors truncate
+            ${
+              selectedLesson?.name === subject.name
+                ? "bg-indigo-500 text-white"
+                : "bg-indigo-100 text-indigo-700 hover:bg-indigo-200"
+            }`}
+                    onClick={() => handleSelectLesson(subject)}
+                  >
+                    {subject.name}
+                  </button>
+                ))
+              ) : (
+                <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50/70 p-4 text-center text-gray-500">
+                  {loading
+                    ? "Fetching subjects..."
+                    : "No subjects found for this class."}
+                </div>
+              )}
+            </div>
+
+            {/* RIGHT — FILTER BUTTON GROUP */}
+            <div className="right flex items-center gap-2">
+              {["Day", "Week", "Month", "All"].map((f) => (
                 <button
-                  key={subject.name}
+                  key={f}
                   type="button"
-                  className={`flex-shrink-0 w-24 h-7 rounded-full px-3 py-1 text-sm font-medium shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400 text-center truncate ${
-                    selectedLesson && selectedLesson.name === subject.name
-                      ? "bg-indigo-300 text-white"
-                      : "bg-indigo-100 hover:bg-indigo-200 text-indigo-700"
-                  }`}
-                  title={subject.name}
-                  onClick={() => handleSelectLesson(subject)}
+                  className="px-4 py-1.5 rounded-full border border-gray-200 text-sm font-medium
+                   text-gray-700 hover:bg-gray-100 transition"
                 >
-                  {subject.name}
+                  {f}
                 </button>
               ))}
             </div>
-          ) : (
-            <div className="mt-4 rounded-xl border border-dashed border-gray-200 bg-gray-50/70 p-6 text-center text-gray-500">
-              {loading
-                ? "Fetching subjects..."
-                : "No subjects found for this class."}
-            </div>
-          )}
+          </div>
 
           {/* Scoring table: delegated to ScoreTableAdmin component */}
           {classInfo && (
