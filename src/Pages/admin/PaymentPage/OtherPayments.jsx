@@ -1,13 +1,11 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo } from "react";
 
 import PaymentsTable from "./PaymentsTable";
 
-const TRAINING_FEE = 150;
-
 export const OtherPayments = ({
   students,
-  setStudents,
   months,
+  billings,
   loading,
   loadingMore,
   error,
@@ -16,6 +14,7 @@ export const OtherPayments = ({
   onRefresh,
   hasMore,
   onLoadMore,
+  recordPayment,
 }) => {
   const [search, setSearch] = useState("");
 
@@ -24,7 +23,8 @@ export const OtherPayments = ({
     return months.map((month) => ({
       key: month.key ?? month.label ?? String(month),
       label: month.label ?? month.key ?? String(month),
-      month: month.month ?? null,
+      monthNumber:
+        month.monthNumber ?? month.month ?? month.month_index ?? null,
       year: month.year ?? null,
     }));
   }, [months]);
@@ -43,21 +43,6 @@ export const OtherPayments = ({
       );
     });
   }, [students, search]);
-
-  const calculateMonthlyFee = useCallback((student) => {
-    if (!student) return 0;
-    if (student.hasEnglishTraining) return TRAINING_FEE;
-
-    const payments = student.payments || {};
-    const fallback = Object.values(payments).find(
-      (entry) =>
-        entry &&
-        entry.total_required_amount !== undefined &&
-        entry.total_required_amount !== null
-    );
-
-    return fallback ? Number(fallback.total_required_amount) : 0;
-  }, []);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -99,15 +84,14 @@ export const OtherPayments = ({
         </div>
 
         <PaymentsTable
-          studentData={filteredStudents}
-          setStudentData={setStudents}
+          students={filteredStudents}
           months={monthItems}
-          calculateMonthlyFee={calculateMonthlyFee}
           loading={loading}
           loadingMore={loadingMore}
           error={error}
           hasMore={hasMore}
           onLoadMore={onLoadMore}
+          recordPayment={recordPayment}
         />
       </div>
     </div>

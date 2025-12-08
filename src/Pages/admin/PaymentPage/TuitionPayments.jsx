@@ -1,14 +1,12 @@
 // src/Components/PaymentPage/Payments.jsx
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 import PaymentsTable from "./PaymentsTable";
 
-const BASE_TUITION = 2600;
-
 export default function TuitionPayments({
   students,
-  setStudents,
   months,
+  billings,
   loading,
   loadingMore,
   error,
@@ -17,65 +15,51 @@ export default function TuitionPayments({
   hasMore,
   onRefresh,
   onLoadMore,
+  recordPayment,
+  searchQuery = "",
+  onSearchChange,
 }) {
-  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState(searchQuery);
+
+  useEffect(() => {
+    setSearchInput(searchQuery);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    if (!onSearchChange) return;
+
+    const handler = setTimeout(() => {
+      if (searchInput === searchQuery) return;
+      onSearchChange(searchInput);
+    }, 400);
+
+    return () => clearTimeout(handler);
+  }, [searchInput, searchQuery, onSearchChange]);
+
+  //seperate the tuition billings and save to another variable
+  const tuitionBillings = useMemo(() => {
+    if (!Array.isArray(billings)) return [];
+    return billings.filter(
+      (billing) => billing.code && billing.code.startsWith("tuition")
+    );
+  }, [billings]);
+
+  //payment purpose is billing.code
+  const tuitionPaymentPurposes = useMemo(() => {
+    if (!Array.isArray(tuitionBillings)) return [];
+    return tuitionBillings.map((billing) => billing.code);
+  }, [tuitionBillings]);
 
   const monthItems = useMemo(() => {
     if (!Array.isArray(months)) return [];
     return months.map((month) => ({
       key: month.key ?? month.label ?? String(month),
       label: month.label ?? month.key ?? String(month),
-      month: month.month ?? null,
+      monthNumber:
+        month.monthNumber ?? month.month ?? month.month_index ?? null,
       year: month.year ?? null,
     }));
   }, [months]);
-
-  const filteredStudents = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return students;
-    return students.filter((student) => {
-      const studentName = (
-        student.full_name ||
-        student.name ||
-        ""
-      ).toLowerCase();
-      return (
-        studentName.includes(q) || String(student.id).toLowerCase().includes(q)
-      );
-    });
-  }, [students, search]);
-
-  const calculateMonthlyFee = useCallback(
-    (student) => {
-      if (!student) return BASE_TUITION;
-      const payments = student.payments || {};
-
-      for (const month of monthItems) {
-        const entry = payments[month.key];
-        if (
-          entry &&
-          entry.total_required_amount !== undefined &&
-          entry.total_required_amount !== null
-        ) {
-          return Number(entry.total_required_amount);
-        }
-      }
-
-      const fallback = Object.values(payments).find(
-        (entry) =>
-          entry &&
-          entry.total_required_amount !== undefined &&
-          entry.total_required_amount !== null
-      );
-
-      if (fallback) {
-        return Number(fallback.total_required_amount);
-      }
-
-      return BASE_TUITION;
-    },
-    [monthItems]
-  );
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -84,8 +68,8 @@ export default function TuitionPayments({
           <div className="flex items-center gap-3 flex-wrap md:flex-nowrap">
             <div className="w-full md:w-1/3 text-sm text-gray-500">
               <span>
-                Showing {filteredStudents.length} of{" "}
-                {meta?.total ?? totalLoaded} students
+                Showing {students.length} of {meta?.total ?? totalLoaded}{" "}
+                students
               </span>
             </div>
 
@@ -97,7 +81,7 @@ export default function TuitionPayments({
             </div>
 
             <div className="w-full md:w-1/3 flex justify-end items-center gap-2">
-              {onRefresh && (
+              {/* {onRefresh && (
                 <button
                   type="button"
                   onClick={() => onRefresh()}
@@ -106,12 +90,12 @@ export default function TuitionPayments({
                 >
                   {loading ? "Refreshing..." : "Refresh"}
                 </button>
-              )}
+              )} */}
               <input
                 type="text"
                 placeholder="Search by ID or name"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 className="border px-3 py-2 rounded w-full md:w-64"
               />
             </div>
@@ -119,16 +103,16 @@ export default function TuitionPayments({
         </div>
 
         <PaymentsTable
-          studentData={filteredStudents}
-          setStudentData={setStudents}
+          students={students}
           months={monthItems}
-          calculateMonthlyFee={calculateMonthlyFee}
+          billings={tuitionBillings}
+          paymentPurposes={tuitionPaymentPurposes}
           loading={loading}
           loadingMore={loadingMore}
           error={error}
           hasMore={hasMore}
           onLoadMore={onLoadMore}
-          paymentPurposePrefix="tuition"
+          recordPayment={recordPayment}
         />
       </div>
     </div>

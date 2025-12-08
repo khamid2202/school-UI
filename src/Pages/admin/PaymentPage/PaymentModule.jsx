@@ -8,6 +8,8 @@ export default function PaymentModule({
   date,
   error,
   submitting,
+  purpose,
+  purposeLabel,
   onClose,
   onChange,
   onSubmit,
@@ -43,6 +45,20 @@ export default function PaymentModule({
         <h2 className="text-lg font-semibold">Record Payment</h2>
         <p className="mt-1 text-sm text-gray-500">{studentName}</p>
 
+        {(purposeLabel || purpose) && (
+          <div className="mt-3 rounded-md border border-blue-100 bg-blue-50 px-3 py-2">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-blue-500">
+              Purpose
+            </p>
+            {/* <p className="text-sm font-medium text-blue-700">
+              {purposeLabel || purpose}
+            </p> */}
+            {purpose && purposeLabel !== purpose && (
+              <p className="text-xs text-blue-500/80">{purpose}</p>
+            )}
+          </div>
+        )}
+
         <form onSubmit={onSubmit} className="mt-4 space-y-4">
           <div>
             <label
@@ -58,7 +74,7 @@ export default function PaymentModule({
               onChange={(event) => onChange?.("amount", event.target.value)}
               className="mt-1 w-full rounded border px-3 py-2"
               autoFocus
-              placeholder="hi"
+              placeholder={amount ?? ""}
             />
           </div>
 

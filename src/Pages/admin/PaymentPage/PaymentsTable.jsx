@@ -1,18 +1,23 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { api } from "../../../Library/RequestMaker";
-import { endpoints } from "../../../Library/Endpoints";
-import PaymentModule from "./Paymentmodule";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import PaymentModule from "./PaymentModule";
+import PaymentHistory from "./PaymentHistory";
 
-function PaymentsTable() {
-  const [students, setStudents] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [error, setError] = useState("");
-  const [meta, setMeta] = useState(null);
-  const [months, setMonths] = useState([]);
-  const [monthNames, setMonthNames] = useState([]);
+function PaymentsTable({
+  students = [],
+  months = [],
+  loading = false,
+  loadingMore = false,
+  error = "",
+  hasMore = false,
+  onLoadMore,
+  recordPayment,
+  billings = [],
+  paymentPurposes = [],
+}) {
   const [openPayment, setOpenPayment] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
+  const [paymentPurpose, setPaymentPurpose] = useState("");
+  const [paymentPurposeLabel, setPaymentPurposeLabel] = useState("");
   const [paymentData, setPaymentData] = useState({
     amount: "",
     method: "cash",
@@ -20,166 +25,51 @@ function PaymentsTable() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
-  const [hasMore, setHasMore] = useState(true);
-  const [currentPage, setCurrentPage] = useState(0);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyStudent, setHistoryStudent] = useState(null);
   const sentinelRef = useRef(null);
-  const isFetchingRef = useRef(false);
-
-  const getStudentKey = (student) => {
-    const key = student?.id ?? student?.student_id ?? student?.user_id ?? null;
-    return key !== null && key !== undefined ? String(key) : null;
-  };
-
-  const resolveCurrentPage = (metaData, fallback) => {
-    if (!metaData || typeof metaData !== "object") return fallback;
-    if (typeof metaData.current_page === "number") return metaData.current_page;
-    if (typeof metaData.page === "number") return metaData.page;
-    if (
-      typeof metaData.offset === "number" &&
-      typeof metaData.limit === "number"
-    ) {
-      return Math.floor(metaData.offset / metaData.limit) + 1;
+  const allowedPurposeSet = useMemo(() => {
+    if (!Array.isArray(paymentPurposes) || !paymentPurposes.length) {
+      return null;
     }
-    return fallback;
-  };
+    return new Set(paymentPurposes);
+  }, [paymentPurposes]);
 
-  const computeHasMore = (metaData, fetchedLength) => {
-    if (!metaData || typeof metaData !== "object") {
-      return fetchedLength > 0;
-    }
-
-    if (Object.prototype.hasOwnProperty.call(metaData, "next_page_url")) {
-      return Boolean(metaData.next_page_url);
-    }
-
-    if (
-      typeof metaData.current_page === "number" &&
-      typeof metaData.last_page === "number"
-    ) {
-      return metaData.current_page < metaData.last_page;
-    }
-
-    if (
-      typeof metaData.page === "number" &&
-      typeof metaData.total_pages === "number"
-    ) {
-      return metaData.page < metaData.total_pages;
-    }
-
-    if (
-      typeof metaData.offset === "number" &&
-      typeof metaData.limit === "number" &&
-      typeof metaData.total === "number"
-    ) {
-      return metaData.offset + metaData.limit < metaData.total;
-    }
-
-    if (
-      typeof metaData.end_index === "number" &&
-      typeof metaData.total === "number"
-    ) {
-      return metaData.end_index < metaData.total;
-    }
-
-    return fetchedLength > 0;
-  };
-
-  const mergeStudents = (existing, incoming) => {
-    if (!existing.length) return incoming;
-
-    const indexById = new Map();
-    const merged = [...existing];
-
-    merged.forEach((student, index) => {
-      const key = getStudentKey(student);
-      if (key !== null) {
-        indexById.set(key, index);
-      }
-    });
-
-    incoming.forEach((student) => {
-      const key = getStudentKey(student);
-      if (key !== null && indexById.has(key)) {
-        merged[indexById.get(key)] = student;
-        return;
-      }
-
-      if (key !== null) {
-        indexById.set(key, merged.length);
-      }
-      merged.push(student);
-    });
-
-    return merged;
-  };
-
-  const loadStudents = useCallback(
-    async (pageToLoad = 1, { append = false } = {}) => {
-      if (isFetchingRef.current) {
-        return;
-      }
-
-      isFetchingRef.current = true;
-
-      if (!append) {
-        setLoading(true);
-      } else {
-        setLoadingMore(true);
-      }
-
-      try {
-        const response = await api.get(endpoints.GET_STUDENT_WITH_PAYMENTS, {
-          page: pageToLoad,
-        });
-
-        const fetchedStudents = response.data?.students || [];
-        const metaData = response.data?.meta || null;
-
-        setStudents((prev) =>
-          append ? mergeStudents(prev, fetchedStudents) : fetchedStudents
-        );
-        setMeta(metaData);
-        if (!append) {
-          setError("");
-        }
-
-        const resolvedPage = resolveCurrentPage(metaData, pageToLoad);
-        setCurrentPage(resolvedPage);
-
-        const moreAvailable = computeHasMore(metaData, fetchedStudents.length);
-        setHasMore(moreAvailable);
-      } catch (fetchError) {
-        console.error("Error fetching students with payments:", fetchError);
-        if (!append) {
-          setError("Failed to load students. Please try again later.");
-        }
-      } finally {
-        isFetchingRef.current = false;
-        if (!append) {
-          setLoading(false);
-        } else {
-          setLoadingMore(false);
-        }
-      }
-    },
-    []
-  );
-
-  // Load students with wallet information once on mount.
+  //WHEN THE MODAL IS OPEN, DISABLE SCROLLING ON THE BACKGROUND
   useEffect(() => {
-    loadStudents(1, { append: false });
-  }, [loadStudents]);
+    const modalOpen = openPayment || historyOpen;
+    if (typeof document === "undefined") return undefined;
 
+    const { body } = document;
+    const root = document.documentElement;
+    const previousBodyOverflow = body.style.overflow;
+    const previousRootOverflow = root.style.overflow;
+
+    if (modalOpen) {
+      body.style.overflow = "hidden";
+      root.style.overflow = "hidden";
+    } else {
+      body.style.overflow = previousBodyOverflow || "";
+      root.style.overflow = previousRootOverflow || "";
+    }
+
+    return () => {
+      body.style.overflow = previousBodyOverflow || "";
+      root.style.overflow = previousRootOverflow || "";
+    };
+  }, [openPayment, historyOpen]);
+
+  //LOAD MORE ON SCROLL TO BOTTOM
   useEffect(() => {
     const node = sentinelRef.current;
-    if (!node) return undefined;
+    if (!node || !onLoadMore) return undefined;
 
     const observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
         if (!entry?.isIntersecting) return;
         if (loading || loadingMore || !hasMore) return;
-        loadStudents(currentPage + 1, { append: true });
+        onLoadMore();
       },
       { rootMargin: "200px" }
     );
@@ -187,114 +77,122 @@ function PaymentsTable() {
     observer.observe(node);
 
     return () => observer.disconnect();
-  }, [hasMore, currentPage, loadStudents, loading, loadingMore]);
+  }, [hasMore, loading, loadingMore, onLoadMore]);
 
-  useEffect(() => {
-    if (!students.length) {
-      setMonths([]);
-      setMonthNames([]);
-      return;
-    }
+  //RESOLVE PAYMENT PURPOSE FOR STUDENT
+  const resolvePurposeForStudent = (student) => {
+    if (!student) return { code: "", amount: "", description: "" };
 
-    const monthLabelLookup = [
-      "January",
-      "February",
-      "March",
-      "April",
-      "May",
-      "June",
-      "July",
-      "August",
-      "September",
-      "October",
-      "November",
-      "December",
-    ];
+    const allowed = allowedPurposeSet;
 
-    const uniqueMonthMap = new Map();
+    const findMatch = (items, codeKey = "code") => {
+      if (!Array.isArray(items)) return null;
+      return (
+        items.find((item) => {
+          const code = item?.[codeKey];
+          if (!code || typeof code !== "string") return false;
+          if (allowed && !allowed.has(code)) return false;
+          return true;
+        }) || null
+      );
+    };
 
-    students.forEach((student) => {
-      if (!Array.isArray(student?.payments)) return;
+    const billingMatch =
+      findMatch(student.billings, "code") ||
+      findMatch(student.payments, "billing_code");
 
-      student.payments.forEach((payment, index) => {
-        if (!payment || typeof payment.month !== "number") return;
+    let code = "";
+    let amount = "";
+    let description = "";
 
-        const year = payment.year ?? null;
-        const key = `${year ?? "na"}-${payment.month}`;
+    if (billingMatch) {
+      code = billingMatch.code || billingMatch.billing_code || "";
 
-        if (!uniqueMonthMap.has(key)) {
-          uniqueMonthMap.set(key, {
-            key,
-            monthNumber: payment.month,
-            year,
-          });
-        }
-      });
-    });
-
-    const monthEntries = Array.from(uniqueMonthMap.values());
-
-    if (!monthEntries.length) {
-      setMonths([]);
-      setMonthNames([]);
-      return;
-    }
-
-    // Define academic order: September (9) → October (10) → November (11) → December (12) → January (1) → ... → June (6)
-    const academicOrder = [9, 10, 11, 12, 1, 2, 3, 4, 5, 6];
-
-    // Sort months according to academic order, falling back to natural order for unknown months
-    const sortedMonths = monthEntries.sort((a, b) => {
-      const indexA = academicOrder.indexOf(a.monthNumber);
-      const indexB = academicOrder.indexOf(b.monthNumber);
-
-      if (indexA === -1 && indexB === -1) {
-        if (a.year === b.year) {
-          return a.monthNumber - b.monthNumber;
-        }
-        return (a.year ?? 0) - (b.year ?? 0);
+      const rawAmount =
+        billingMatch.amount ??
+        billingMatch.total_required_amount ??
+        (typeof billingMatch.required_amount === "number"
+          ? billingMatch.required_amount
+          : undefined);
+      if (rawAmount !== undefined && rawAmount !== null && rawAmount !== "") {
+        amount = String(Number(rawAmount));
       }
 
-      if (indexA === -1) return 1; // push unknown months to the end
-      if (indexB === -1) return -1;
+      description =
+        billingMatch.description ||
+        billingMatch.title ||
+        billingMatch.name ||
+        "";
+    }
 
-      if (indexA === indexB) {
-        return (a.year ?? 0) - (b.year ?? 0);
+    if (!code && Array.isArray(student.billings) && student.billings.length) {
+      code = student.billings[0].code || "";
+    }
+
+    if (!code && allowed && allowed.size === 1) {
+      const [fallbackCode] = Array.from(allowed);
+      code = fallbackCode || "";
+    }
+
+    if (!amount && code) {
+      const parts = code.split("/");
+      if (parts.length > 1 && Number(parts[1])) {
+        amount = String(Number(parts[1]));
       }
+    }
 
-      return indexA - indexB;
-    });
+    if (
+      (amount === "" || description === "") &&
+      code &&
+      Array.isArray(billings)
+    ) {
+      const billingFromList = billings.find(
+        (item) => item?.code && item.code === code
+      );
+      if (billingFromList) {
+        if (amount === "" && billingFromList.amount !== undefined) {
+          amount = String(Number(billingFromList.amount));
+        }
+        description =
+          billingFromList.description || billingFromList.title || "";
+      }
+    }
 
-    const formattedMonthNames = sortedMonths.map((item) => ({
-      ...item,
-      label:
-        monthLabelLookup[item.monthNumber - 1] || `Month ${item.monthNumber}`,
-    }));
-
-    setMonths(sortedMonths);
-    setMonthNames(formattedMonthNames);
-  }, [students]);
+    return { code, amount, description };
+  };
 
   const handleOpenPayment = (student) => {
-    console.log("Opening payment module for student:", student);
-    const billingCode = student.payments[0]?.billing_code || "";
-    const parts = billingCode.split("/");
-    const requiredAmount = parts.length > 1 ? parts[1] : "";
+    const { code, amount, description } = resolvePurposeForStudent(student);
+    const requiredAmount = amount || "";
 
     setSelectedStudent(student);
+    setPaymentPurpose(code || "");
+    setPaymentPurposeLabel(description || "");
     setPaymentData({
       amount: requiredAmount,
       method: "cash",
       date: new Date().toISOString().split("T")[0], // default today
     });
-    // console.log("The payment data is set to:", paymentData);
+
     setOpenPayment(true);
   };
 
   const handleClosePayment = () => {
     setOpenPayment(false);
     setSelectedStudent(null);
+    setPaymentPurpose("");
+    setPaymentPurposeLabel("");
     setErrorMsg("");
+  };
+
+  const handleOpenHistory = (student) => {
+    setHistoryStudent(student);
+    setHistoryOpen(true);
+  };
+
+  const handleCloseHistory = () => {
+    setHistoryOpen(false);
+    setHistoryStudent(null);
   };
 
   //handle payment is here
@@ -305,35 +203,30 @@ function PaymentsTable() {
     setSubmitting(true);
     setErrorMsg("");
 
-    try {
-      const amount = Number(paymentData.amount);
-      const isRefund = amount < 0; // refund if negative
+    const amount = Number(paymentData.amount);
+    const isRefund = amount < 0;
 
-      const body = {
-        student_id: selectedStudent.id || selectedStudent.student_id,
-        purpose: selectedStudent.payments[0]?.billing_code || "NULL",
-        amount, // backend can get both negative and positive number
-        method: paymentData.method,
-        is_refund: isRefund, // tell backend it's a refund
-      };
-
-      console.log("Sending payment data:", body);
-
-      const response = await api.post(endpoints.CREATE_PAYMENT, body);
-
-      if (response.data.ok) {
-        console.log("Payment success:", response.data);
-        setOpenPayment(false);
-        await loadStudents(1, { append: false });
-      } else {
-        setErrorMsg(response.data.message || "Failed to record payment.");
-      }
-    } catch (error) {
-      console.error("Payment submission error:", error);
-      setErrorMsg("An error occurred while saving payment.");
-    } finally {
+    if (!recordPayment) {
+      setErrorMsg("Payment submission is currently unavailable.");
       setSubmitting(false);
+      return;
     }
+
+    const result = await recordPayment({
+      studentId: selectedStudent.id || selectedStudent.student_id,
+      purpose: paymentPurpose || paymentPurposes[0] || "",
+      amount,
+      method: paymentData.method,
+      isRefund,
+    });
+
+    if (result.ok) {
+      handleClosePayment();
+    } else {
+      setErrorMsg(result.message || "Failed to record payment.");
+    }
+
+    setSubmitting(false);
   };
 
   const handleChangePayment = (field, value) => {
@@ -370,6 +263,13 @@ function PaymentsTable() {
           payment.year !== monthDescriptor.year
         ) {
           return false;
+        }
+
+        if (allowedPurposeSet) {
+          const code = payment.billing_code || payment.code || payment.purpose;
+          if (!code || !allowedPurposeSet.has(code)) {
+            return false;
+          }
         }
 
         return true;
@@ -436,7 +336,7 @@ function PaymentsTable() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="">
       <div className="hidden overflow-x-auto rounded-md border border-gray-200 bg-white md:block">
         <table className="min-w-full divide-y divide-gray-200 text-sm">
           <thead>
@@ -447,7 +347,8 @@ function PaymentsTable() {
               </th>
               <th className="border px-3 py-2 ">Class</th>
               <th className="border px-3 py-2 ">Wallet</th>
-              {monthNames.map((month) => (
+              <th className="border px-3 py-2">Payment history</th>
+              {months.map((month) => (
                 <th
                   key={month.key}
                   className={`border px-3 py-2 ${MONTH_CELL_CLASSES}`}
@@ -455,7 +356,7 @@ function PaymentsTable() {
                   {month.label}
                 </th>
               ))}
-              <th>Amount</th>
+              <th className="border px-3 py-2">Amount</th>
             </tr>
           </thead>
           <tbody>
@@ -467,6 +368,7 @@ function PaymentsTable() {
                 student.group?.class_pair ||
                 student.group?.class_pair_compact ||
                 "—";
+              const { amount: dueAmount } = resolvePurposeForStudent(student);
 
               return (
                 <tr key={studentId} className="hover:bg-gray-50">
@@ -484,7 +386,15 @@ function PaymentsTable() {
                   <td className="justify-center items-center border px-3 py-2 ">
                     {formatWallet(resolveWallet(student))}
                   </td>
-                  {monthNames.map((month) => {
+                  <td className="border px-3 py-2">
+                    <button
+                      onClick={() => handleOpenHistory(student)}
+                      className="w-full rounded border border-gray-200 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
+                    >
+                      View history
+                    </button>
+                  </td>
+                  {months.map((month) => {
                     const paymentForMonth = findPaymentForMonth(student, month);
 
                     return (
@@ -511,27 +421,13 @@ function PaymentsTable() {
                     );
                   })}
                   <td className="justify-center items-center border px-3 py-2">
-                    {(() => {
-                      // get billing_code safely
-                      const billingCode =
-                        student.billing_code ||
-                        student.payments[0]?.billing_code ||
-                        "";
-
-                      // split and extract amount after slash
-                      const parts = billingCode.split("/");
-                      const requiredAmount = parts.length > 1 ? parts[1] : "—";
-                      return (
-                        <button
-                          onClick={() => handleOpenPayment(student)}
-                          className="w-full px-3 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100"
-                        >
-                          {requiredAmount !== "—"
-                            ? requiredAmount
-                            : "Required amount"}
-                        </button>
-                      );
-                    })()}
+                    <button
+                      onClick={() => handleOpenPayment(student)}
+                      className="px-3 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100"
+                    >
+                      {/* data comes as 2600.00, need to convert to 2600 */}
+                      {dueAmount ? Math.floor(Number(dueAmount)) : "Pay"}
+                    </button>
                   </td>
                 </tr>
               );
@@ -543,7 +439,7 @@ function PaymentsTable() {
       {/********************  mobile view **********************/}
 
       <div className="space-y-4 md:hidden">
-        {students.map((student, index) => {
+        {students.map((student, index, amount) => {
           const studentId =
             student.id ?? student.student_id ?? student.user_id ?? index;
           const classLabel =
@@ -551,6 +447,7 @@ function PaymentsTable() {
             student.group?.class_pair ||
             student.group?.class_pair_compact ||
             "—";
+          const { amount: dueAmount } = resolvePurposeForStudent(student);
 
           return (
             <div
@@ -578,11 +475,11 @@ function PaymentsTable() {
                 <p>{classLabel}</p>
               </div>
 
-              {monthNames.length > 0 && (
+              {months.length > 0 && (
                 <div className="mt-4">
                   <p className="text-xs uppercase text-gray-500">Months</p>
                   <div className="mt-2 flex flex-wrap gap-2">
-                    {monthNames.map((month) => {
+                    {months.map((month) => {
                       const paymentForMonth = findPaymentForMonth(
                         student,
                         month
@@ -610,27 +507,19 @@ function PaymentsTable() {
                 </div>
               )}
               <div className="mt-4 flex flex-row items-center gap-3">
-                {(() => {
-                  // get billing_code safely
-                  const billingCode =
-                    student.billing_code ||
-                    student.payments[0]?.billing_code ||
-                    "";
-
-                  // split and extract amount after slash
-                  const parts = billingCode.split("/");
-                  const requiredAmount = parts.length > 1 ? parts[1] : "—";
-                  return (
-                    <button
-                      onClick={() => handleOpenPayment(student)}
-                      className="w-full px-3 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100"
-                    >
-                      {requiredAmount !== "—"
-                        ? requiredAmount
-                        : "Required amount"}
-                    </button>
-                  );
-                })()}
+                <button
+                  onClick={() => handleOpenPayment(student)}
+                  className="px-3 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100"
+                >
+                  {/* data comes as 2600.00, need to convert to 2600 */}
+                  {dueAmount ? Math.floor(Number(dueAmount)) : "Pay"}
+                </button>
+                <button
+                  onClick={() => handleOpenHistory(student)}
+                  className="px-3 py-1 rounded border border-gray-200 text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  History
+                </button>
               </div>
             </div>
           );
@@ -647,6 +536,11 @@ function PaymentsTable() {
           No more students to load.
         </div>
       )}
+      <PaymentHistory
+        open={historyOpen}
+        student={historyStudent}
+        onClose={handleCloseHistory}
+      />
       {openPayment && selectedStudent && (
         <PaymentModule
           open={openPayment}
@@ -658,6 +552,8 @@ function PaymentsTable() {
           date={paymentData.date}
           error={errorMsg}
           submitting={submitting}
+          purpose={paymentPurpose}
+          purposeLabel={paymentPurposeLabel}
           onClose={handleClosePayment}
           onChange={handleChangePayment}
           onSubmit={handleSubmitPayment}

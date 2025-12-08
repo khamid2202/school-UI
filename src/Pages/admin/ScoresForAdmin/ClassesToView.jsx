@@ -4,45 +4,27 @@ import { api } from "../../../Library/RequestMaker.jsx";
 import { endpoints } from "../../../Library/Endpoints.jsx";
 import { BookOpen, Users, User, MapPin, Clock } from "lucide-react";
 
-function ClassesForScoringPage() {
+function ClassesToView() {
   const [classes, setClasses] = useState([]);
   const [filteredClasses, setFilteredClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
 
+  //get the classes from the localStorage
+  const classesFromStorage = localStorage.getItem("classes");
   useEffect(() => {
-    const fetchClasses = async () => {
+    if (classesFromStorage) {
       try {
-        const res = await api.get(endpoints.GROUPS);
-        if (res.data?.groups) {
-          setClasses(res.data.groups);
-          setFilteredClasses(res.data.groups);
-          localStorage.setItem("classes", JSON.stringify(res.data.groups));
-        }
-      } catch (error) {
-        console.error("Failed to fetch classes:", error);
-      } finally {
+        const parsedClasses = JSON.parse(classesFromStorage);
+        setClasses(parsedClasses);
+        setFilteredClasses(parsedClasses);
         setLoading(false);
-      }
-    };
-
-    fetchClasses();
-
-    const fetchAllStudents = async () => {
-      try {
-        const res = await api.get(
-          endpoints.STUDENTS + "?academic_year=2025-2026&include_group=1"
-        );
-        const students = res.data?.students || res.data || [];
-        localStorage.setItem("AllStudents", JSON.stringify(students));
       } catch (error) {
-        console.error("Failed to fetch all students:", error);
+        console.error("Failed to parse classes from localStorage:", error);
       }
-    };
-
-    fetchAllStudents();
-  }, []);
+    }
+  }, [classesFromStorage]);
 
   useEffect(() => {
     if (!search.trim()) {
@@ -128,7 +110,11 @@ function ClassesForScoringPage() {
             <div
               key={c.id || c.uuid}
               className="bg-white rounded-xl shadow hover:shadow-lg transition p-6 relative cursor-pointer"
-              onClick={() => navigate("/scores", { state: { classInfo: c } })}
+              onClick={() =>
+                navigate("/classes-to-view/class-subjects", {
+                  state: { classInfo: c },
+                })
+              }
             >
               <div className="absolute top-4 right-4 bg-green-100 text-green-700 text-xs font-semibold px-2 py-1 rounded-full">
                 Active
@@ -172,4 +158,4 @@ function ClassesForScoringPage() {
   );
 }
 
-export default ClassesForScoringPage;
+export default ClassesToView;

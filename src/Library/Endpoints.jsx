@@ -11,18 +11,32 @@ export const endpoints = {
   TEACHERS: `/users`,
   CREATE_USER: `/users/create`,
   UPDATE_USER: `/users/update`,
-  STUDENTS: `/students`,
+  STUDENTS_WITH_GROUPS: `/students?academic_year=2025-2026&include_group=1`,
+  STUDENTS: `/students?academic_year=2025-2026&include_wallet=1&include_group=1`,
   CREATE_STUDENT: `/students`,
   ASSIGN_STUDENT_GROUP: `/students/assign-group`,
-  GET_STUDENT_WITH_PAYMENTS: `/students?academic_year=2025-2026&include_payments=1&include_group=1&include_billings=1&include_wallet=1`,
+  GET_STUDENT_WITH_PAYMENTS: `/students?academic_year=2025-2026&include_payments=1&include_group=1&include_billings=1&include_wallet=1&include_payment_history=1`,
   CREATE_PAYMENT: `/students/payments`,
   GET_BILLINGS: `/billing/codes`,
-  BILLING_CODES: `/billing/codes`,
+  CREATE_INVOICE: `/students/invoices`,
+  GET_SUBJECTS: `/subjects`,
+  GET_STUDENTS_OF_CLASS: `/students?academic_year=2025-2026`,
   // Timetables
   TIMETABLES: `/timetables`,
   TIMETABLES_UPLOAD: `/timetables/upload`,
   TIMETABLES_MY_LESSONS: `/timetables/my-lessons`,
-  // Tools
+
+  //Dorm students
+  GET_DORM_STUDENTS: `/students?academic_year=2025-2026&include_group=1&include_billings=1&filter={"billing_codes":["dorm/700"]}&sort=[{"field":"full_name"}]&include_wallet=1&include_payments=1&include_payment_history=1`,
+  ASSIGN_BILLING_CODE: `/students/assign-billing-code`,
+  REMOVE_FROM_GROUP: `/students/remove-from-group`,
+
+  //Subjects
+  GET_SUBJECTS_FOR_CLASS_FROM_TIMETABLE: `/timetable`,
+
+  // Scores and Points
+  GET_LESSON_POINTS: `/students/points/lesson`,
   ACADEMIC_YEARS: `/academic-years`,
   SUBJECTS: `/subjects`,
+  BILLING_CODES: `/billing/codes`
 };

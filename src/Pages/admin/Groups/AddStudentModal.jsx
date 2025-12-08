@@ -73,9 +73,7 @@ export default function AddStudentModal({
         ...(defaultClass ? { group: defaultClass } : {}),
       };
 
-      if (onAdd) {
-        await onAdd(studentForUi);
-      }
+      onAdd(studentForUi);
 
       // reset and close
       handleClose();

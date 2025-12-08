@@ -8,6 +8,7 @@ import {
   BarChart2,
   Calendar,
   Settings,
+  Wrench,
   ChevronLeft,
   ChevronRight,
   LogOut,
@@ -51,7 +52,11 @@ function Navbar({ isExpanded, setIsExpanded }) {
       label: "Payment",
     },
     { to: "/teachers", icon: <Users size={20} />, label: "Tutors" },
-    { to: "/classes-for-scoring", icon: <BarChart2 size={20} />, label: "Scoring" },
+    {
+      to: "/classes-to-view",
+      icon: <BarChart2 size={20} />,
+      label: "Scores",
+    },
     { to: "/timetable", icon: <Calendar size={20} />, label: "Timetable" },
     { to: "/tools", icon: <Wrench size={20} />, label: "Tools" },
   ];
@@ -138,7 +143,7 @@ function Navbar({ isExpanded, setIsExpanded }) {
           </div>
 
           {/* Nav Links */}
-          <div className="flex flex-col mt-2 space-y-1 overflow-y-auto">
+          <div className="flex flex-col mt-2 space-y-1 overflow-y-auto scrollbar-hide">
             {navItems.map((item) => (
               <Link
                 key={item.to}
@@ -171,7 +176,9 @@ function Navbar({ isExpanded, setIsExpanded }) {
               <Settings size={20} className="flex-shrink-0" />
               <span
                 className={`whitespace-nowrap transition-opacity duration-300 ${
-                  isExpanded && showText ? "opacity-100 ml-2" : "opacity-0 w-0 overflow-hidden ml-0"
+                  isExpanded && showText
+                    ? "opacity-100 ml-2"
+                    : "opacity-0 w-0 overflow-hidden ml-0"
                 }`}
               >
                 Settings

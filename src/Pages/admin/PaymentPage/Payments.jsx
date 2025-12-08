@@ -1,43 +1,33 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState } from "react";
 import TuitionPayments from "./TuitionPayments";
 import { DormPayments } from "./DormPayments";
 import { OtherPayments } from "./OtherPayments";
-import { api } from "../../../Library/RequestMaker";
-import { endpoints } from "../../../Library/Endpoints";
+import useStudentPayments from "./hooks/useStudentPaymentsContext";
 
 export const Payments = () => {
   const [tab, setTab] = useState("tuition");
-  const [students, setStudents] = useState([]);
-  const [meta, setMeta] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [error, setError] = useState(null);
 
-  const [hasMore, setHasMore] = useState(true);
-  const [totalLoaded, setTotalLoaded] = useState(0);
+  const {
+    students,
+    dormStudents,
+    months,
+    billings,
+    meta,
+    loading,
+    loadingMore,
+    error,
+    hasMore,
+    refresh,
+    loadMore,
+    recordPayment,
+    query,
+    setQuery,
+    dormQuery,
+    setDormQuery,
+  } = useStudentPayments();
 
-  useEffect(() => {
-    const fetchStudentsWithPayments = async () => {
-      try {
-        const res = await api.get(endpoints.GET_STUDENT_WITH_PAYMENTS);
-
-        setStudents(res.data.students);
-        setMeta(res.data.meta || null);
-        console.log(
-          "Fetched students with payments:",
-          res.data.students[0].payments
-        );
-        setError("");
-      } catch (fetchError) {
-        console.error("Error fetching students with payments:", fetchError);
-        setError("Failed to load students with payments.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchStudentsWithPayments();
-  }, []);
+  const totalLoaded = students.length;
+  const dormLoaded = dormStudents.length;
 
   return (
     <div className="min-h-screen">
@@ -63,7 +53,7 @@ export const Payments = () => {
           >
             Dorm
           </button>
-          <button
+          {/* <button
             className={`px-4 py-2 rounded-md font-medium ${
               tab === "other"
                 ? "bg-indigo-600 text-white"
@@ -72,44 +62,60 @@ export const Payments = () => {
             onClick={() => setTab("other")}
           >
             Other
-          </button>
+          </button> */}
         </div>
 
         <div>
           {tab === "tuition" && (
             <TuitionPayments
               students={students}
-              setStudents={setStudents}
+              months={months}
+              billings={billings}
               loading={loading}
               loadingMore={loadingMore}
               error={error}
               meta={meta}
               totalLoaded={totalLoaded}
               hasMore={hasMore}
+              onRefresh={refresh}
+              onLoadMore={loadMore}
+              recordPayment={recordPayment}
+              searchQuery={query}
+              onSearchChange={setQuery}
             />
           )}
           {tab === "dorm" && (
             <DormPayments
-              students={students}
-              setStudents={setStudents}
+              students={dormStudents}
+              months={months}
+              billings={billings}
               loading={loading}
               loadingMore={loadingMore}
               error={error}
               meta={meta}
-              totalLoaded={totalLoaded}
+              totalLoaded={dormLoaded}
               hasMore={hasMore}
+              onRefresh={refresh}
+              onLoadMore={loadMore}
+              recordPayment={recordPayment}
+              searchQuery={dormQuery}
+              onSearchChange={setDormQuery}
             />
           )}
           {tab === "other" && (
             <OtherPayments
               students={students}
-              setStudents={setStudents}
+              months={months}
+              billings={billings}
               loading={loading}
               loadingMore={loadingMore}
               error={error}
               meta={meta}
               totalLoaded={totalLoaded}
               hasMore={hasMore}
+              onRefresh={refresh}
+              onLoadMore={loadMore}
+              recordPayment={recordPayment}
             />
           )}
         </div>
