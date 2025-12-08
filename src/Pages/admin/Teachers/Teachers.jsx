@@ -238,16 +238,24 @@ function Teachers() {
       } else {
         // Create new teacher
         const payload = {
-          full_name: formData.full_name,
           username: formData.username,
-          email: formData.email || undefined,
           password: formData.password,
+          full_name: formData.full_name,
+          email: formData.email || undefined,
           phone: formData.phone_number || undefined,
-          status: formData.status,
-          role: formData.roles[0] || "teacher", // For backward compatibility
-          roles: formData.roles,
-          permissions: formData.permissions,
+          status: formData.status || "active",
+          roles: formData.roles.length > 0 ? formData.roles : ["teacher"],
+          permissions: formData.permissions.length > 0 ? formData.permissions : undefined,
         };
+
+        // Remove undefined values to avoid sending them
+        Object.keys(payload).forEach(key => {
+          if (payload[key] === undefined) {
+            delete payload[key];
+          }
+        });
+
+        console.log("Creating teacher with payload:", payload);
 
         const response = await api.post(endpoints.CREATE_USER, payload);
         

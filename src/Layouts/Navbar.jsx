@@ -11,6 +11,7 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
+  Wrench,
 } from "lucide-react";
 import { sendLogoutRequest } from "../Library/Authenticate.jsx";
 
@@ -52,6 +53,7 @@ function Navbar({ isExpanded, setIsExpanded }) {
     { to: "/teachers", icon: <Users size={20} />, label: "Tutors" },
     { to: "/classes-for-scoring", icon: <BarChart2 size={20} />, label: "Scoring" },
     { to: "/timetable", icon: <Calendar size={20} />, label: "Timetable" },
+    { to: "/tools", icon: <Wrench size={20} />, label: "Tools" },
   ];
 
   const handleLogOut = () => {

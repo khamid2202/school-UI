@@ -12,6 +12,7 @@ import Scores from "./Pages/admin/Scoring/Scoring";
 import ClassManagement from "./Pages/admin/Groups/ClassManagement";
 import ClassesForScoring from "./Pages/admin/Scoring/ClassesForScoring";
 import Timetable from "./Pages/admin/Timetable/Timetable";
+import Tools from "./Pages/admin/Tools/Tools";
 
 function App() {
   return (
@@ -36,6 +37,7 @@ function App() {
           <Route path="/classes-for-scoring" element={<ClassesForScoring />} />
           <Route path="/scores" element={<Scores />} />
           <Route path="/timetable" element={<Timetable />} />
+          <Route path="/tools" element={<Tools />} />
         </Route>
       </Routes>
     </Router>
