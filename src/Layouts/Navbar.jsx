@@ -12,7 +12,6 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
-  Wrench,
 } from "lucide-react";
 import { sendLogoutRequest } from "../Library/Authenticate.jsx";
 
