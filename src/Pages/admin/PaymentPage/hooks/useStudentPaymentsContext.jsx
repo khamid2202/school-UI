@@ -169,7 +169,7 @@ export const useStudentPayments = ({ enabled = true } = {}) => {
     const fetchBillings = async () => {
       try {
         const response = await api.get(endpoints.GET_BILLINGS);
-        const billings = response.data || [];
+        const billings = response.data.billing_codes || [];
 
         setBillings(billings);
       } catch (error) {

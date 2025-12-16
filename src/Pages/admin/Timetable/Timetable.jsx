@@ -1,15 +1,9 @@
-import { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { api } from "../../../Library/RequestMaker.jsx";
 import { endpoints } from "../../../Library/Endpoints.jsx";
 import { Loader2, AlertCircle, Upload } from "lucide-react";
 
-const DAYS = [
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-];
+const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 const DAY_MAP = {
   Monday: 1,
   Tuesday: 2,
@@ -78,7 +72,7 @@ function Timetable() {
     const fetchTimetable = async () => {
       setError("");
       try {
-        const params = { academic_year: academicYear };
+        const params = { academic_year_id: 1 };
 
         // Add filters based on view mode
         // Send as comma-separated string, not array
@@ -93,15 +87,12 @@ function Timetable() {
           params.days = String(DAY_MAP[dayFilter]);
         }
 
-        const timetableRes = await api.get(endpoints.TIMETABLES, params);
-        const timetables = timetableRes.data?.timetables || [];
-        const today = new Date();
-        const filteredTimetables = timetables.filter((item) => {
-          return item.end_date ? new Date(item.end_date) >= today : true;
-        });
-        
+        console.log("paramsssssssss:", params);
+        const timetableRes = await api.get(endpoints.TIMETABLE, params);
+        const timetable = timetableRes.data?.timetable || [];
+
         // Transform data: add missing fields that backend doesn't provide
-        const transformedData = filteredTimetables.map((item) => ({
+        const transformedData = timetable.map((item) => ({
           ...item,
           // Add day_index if missing
           day_index: item.day_index || DAY_MAP[item.day],
@@ -110,8 +101,8 @@ function Timetable() {
           // Add group_id: use the lesson id or create from grade+class
           group_id: item.group_id || `${item.grade}-${item.class}`,
         }));
-        
-        console.log("filteredTimetables:", transformedData);
+
+        // console.log("timetable:", transformedData);
         setTimetableData(transformedData);
       } catch (err) {
         console.error(err);
@@ -192,7 +183,7 @@ function Timetable() {
       formData.append("start_date", startDate);
       if (endDate) formData.append("end_date", endDate);
 
-      const res = await api.postForm(endpoints.TIMETABLES_UPLOAD, formData);
+      const res = await api.postForm(endpoints.TIMETABLE_UPLOAD, formData);
       setUploadResult(res.data || res);
 
       // Refresh timetable data after successful upload
@@ -468,9 +459,12 @@ function Timetable() {
                 {(dayFilter === "all" ? DAYS : [dayFilter]).map((day) => {
                   const dayIndex = DAY_MAP[day];
                   return (
-                    <>
+                    <React.Fragment key={day}>
                       {/* Class headers row for this day */}
-                      <tr key={`${day}_classes`} className="bg-indigo-50 border-b">
+                      <tr
+                        key={`${day}_classes`}
+                        className="bg-indigo-50 border-b"
+                      >
                         <td className="px-3 md:px-4 py-2 text-xs md:text-sm font-semibold text-gray-800 border-r sticky left-0 bg-indigo-50 z-10 whitespace-nowrap">
                           {day}
                         </td>
@@ -489,43 +483,43 @@ function Timetable() {
                           key={`${day}_${timeSlot.id}`}
                           className="border-b hover:bg-gray-50/50"
                         >
-                      {/* Period column */}
-                      <td className="px-2 md:px-4 py-2 md:py-3 text-xs md:text-sm text-gray-600 border-r sticky left-0 bg-white whitespace-nowrap">
-                        <div className="font-medium">{timeSlot.slot}</div>
-                      </td>
-
-                      {/* Class cells */}
-                      {classesSorted.map((cls) => {
-                        const key = `${dayIndex}_${timeSlot.id}_${cls.id}`;
-                        const lesson = gridData.get(key);
-                        return (
-                          <td
-                            key={`cell-${key}`}
-                            className="px-2 md:px-3 py-2 text-xs md:text-sm border-r align-top min-w-[140px] md:min-w-[180px]"
-                          >
-                            {lesson ? (
-                              <div className="space-y-1">
-                                <div className="font-semibold text-gray-900">
-                                  {lesson.subject}
-                                </div>
-                                <div className="text-xs text-gray-600">
-                                  {lesson.teacher}
-                                </div>
-                                {lesson.room && (
-                                  <div className="text-xs text-gray-500">
-                                    Room {lesson.room}
-                                  </div>
-                                )}
-                              </div>
-                            ) : (
-                              <div className="text-gray-400 text-xs">—</div>
-                            )}
+                          {/* Period column */}
+                          <td className="px-2 md:px-4 py-2 md:py-3 text-xs md:text-sm text-gray-600 border-r sticky left-0 bg-white whitespace-nowrap">
+                            <div className="font-medium">{timeSlot.slot}</div>
                           </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                    </>
+
+                          {/* Class cells */}
+                          {classesSorted.map((cls) => {
+                            const key = `${dayIndex}_${timeSlot.id}_${cls.id}`;
+                            const lesson = gridData.get(key);
+                            return (
+                              <td
+                                key={`cell-${key}`}
+                                className="px-2 md:px-3 py-2 text-xs md:text-sm border-r align-top min-w-[140px] md:min-w-[180px]"
+                              >
+                                {lesson ? (
+                                  <div className="space-y-1">
+                                    <div className="font-semibold text-gray-900">
+                                      {lesson.subject}
+                                    </div>
+                                    <div className="text-xs text-gray-600">
+                                      {lesson.teacher}
+                                    </div>
+                                    {lesson.room && (
+                                      <div className="text-xs text-gray-500">
+                                        Room {lesson.room}
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div className="text-gray-400 text-xs">—</div>
+                                )}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </React.Fragment>
                   );
                 })}
               </tbody>

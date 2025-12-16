@@ -21,10 +21,10 @@ export const endpoints = {
   CREATE_INVOICE: `/students/invoices`,
   GET_SUBJECTS: `/subjects`,
   GET_STUDENTS_OF_CLASS: `/students?academic_year=2025-2026`,
-  // Timetables
-  TIMETABLES: `/timetable`,
-  TIMETABLES_UPLOAD: `/timetable/upload`,
-  TIMETABLES_MY_LESSONS: `/timetable/my-lessons`,
+  // Timetable
+  TIMETABLE: `/timetable`,
+  TIMETABLE_UPLOAD: `/timetable/upload`,
+  TIMETABLE_MY_LESSONS: `/timetable/my-lessons`,
 
   //Dorm students
   GET_DORM_STUDENTS: `/students?academic_year=2025-2026&include_group=1&include_billings=1&filter={"billing_codes":["dorm/700"]}&sort=[{"field":"full_name"}]&include_wallet=1&include_payments=1&include_payment_history=1`,
