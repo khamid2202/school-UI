@@ -73,7 +73,7 @@ const Login = () => {
       <div className="md:w-1/2  md:block">
         <div className="md:flex hidden  md:items-center md:justify-center md:min-h-screen">
           <img
-            src="../../../public/images/login_page.jpeg"
+            src="/images/login_page.jpeg"
             className="md:h-full  md:w-full md:object-cover"
           />
         </div>
@@ -83,7 +83,7 @@ const Login = () => {
           {/* Logo */}
           <div className="flex justify-center p-8 mb-6">
             <img
-              src="../../../public/images/2.png"
+              src="/images/2.png"
               alt="Logo"
               className="w-32 h-28" // 👈 smaller logo
               draggable="false"
