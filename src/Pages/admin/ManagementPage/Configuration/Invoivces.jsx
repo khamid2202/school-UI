@@ -1,21 +1,20 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Filter, Search } from "lucide-react";
-import { api } from "../../../Library/RequestMaker";
-import { endpoints } from "../../../Library/Endpoints";
-import useStudentPayments from "../PaymentPage/hooks/useStudentPaymentsContext";
+import { api } from "../../../../Library/RequestMaker";
+import { endpoints } from "../../../../Library/Endpoints";
+import { useGlobalContext } from "../../../../Hooks/UseContext";
 import toast from "react-hot-toast";
-import ReusableFilter from "../../../Layouts/ReusableFilter";
+import ReusableFilter from "../../../../Layouts/ReusableFilter";
+import MobileCards from "./MobileCards";
+
+//import the contex from payment context
 
 // minimal className joiner
 const cn = (...c) => c.filter(Boolean).join(" ");
 
 const SPECIAL_TUITION_CLASSES = new Set(["4-A", "4-B"]);
-const DEFAULT_ACADEMIC_YEAR = "2025-2026";
-const STATUS_STYLES = {
-  success: "bg-green-50 text-green-700 border border-green-200",
-  error: "bg-red-50 text-red-600 border border-red-200",
-  info: "bg-blue-50 text-blue-600 border border-blue-200",
-};
+
+// milliseconds before status toasts auto-dismiss
 const STATUS_DISMISS_DELAY = 2000;
 
 const MONTH_OPTIONS = [
@@ -34,11 +33,17 @@ const MONTH_OPTIONS = [
 ];
 
 const getAllowedTuitionAmount = (student) => {
-  const classPair = student?.group?.class_pair || "";
-  if (!classPair) return 2600;
+  // Derive class pair even if the API omits class_pair but provides grade/class.
+  const classPair =
+    student?.group?.class_pair ||
+    [student?.group?.grade, student?.group?.class].filter(Boolean).join("-");
+
+  // Only 4th classes (e.g., 4-A, 4-B) can have tuition/2300; others must use tuition/2600.
   if (SPECIAL_TUITION_CLASSES.has(classPair)) {
     return 2300;
   }
+
+  // Default for all other grades.
   return 2600;
 };
 
@@ -51,17 +56,21 @@ const extractTuitionAmountFromCode = (code) => {
   return Number.isFinite(amount) ? amount : null;
 };
 
-function Configuration() {
+function ConfigurationContent() {
   const {
     students,
     setStudents,
     loading,
     loadingMore,
     error,
-    billings,
     hasMore,
     loadMore,
-  } = useStudentPayments({ enabled: true });
+    billings = [],
+    notifyBillingUpdate,
+    notifyInvoiceCreated,
+  } = useGlobalContext();
+
+  //declare the new context values
 
   const [query, setQuery] = useState("");
   const [selectedClasses, setSelectedClasses] = useState([]);
@@ -78,10 +87,26 @@ function Configuration() {
     "Unnamed";
 
   // Billing codes rendered as columns
-  const billingCodes = useMemo(
-    () => billings.map((b) => b?.code).filter(Boolean),
-    [billings]
-  );
+  const billingCodes = useMemo(() => {
+    const seen = new Set();
+    return billings
+      .map((b) => b?.code)
+      .filter((code) => {
+        if (!code) return false;
+        if (seen.has(code)) return false;
+        seen.add(code);
+        return true;
+      });
+  }, [billings]);
+
+  // Map billing code to full billing object for quick id lookups.
+  const billingByCode = useMemo(() => {
+    const map = new Map();
+    billings.forEach((b) => {
+      if (b?.code) map.set(b.code, b);
+    });
+    return map;
+  }, [billings]);
 
   const classOptions = useMemo(() => {
     const seen = new Set();
@@ -110,6 +135,8 @@ function Configuration() {
     return Array.from(new Set(codes));
   };
 
+  // Tuition enforcement handled during manual assignments.
+
   // Handle creating invoices for all students
   const handleCreateInvoices = async () => {
     const currentYear = new Date().getFullYear();
@@ -123,40 +150,7 @@ function Configuration() {
 
       console.log("Invoice creation response:", response.data);
 
-      toast.custom((t) => (
-        <div
-          className={cn(
-            "bg-white text-black shadow-md rounded-md p-4",
-            STATUS_STYLES.success
-          )}
-        >
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-800">
-                Invoice created successfully for all students.
-              </p>
-            </div>
-          </div>
-        </div>
-      ));
-
-      toast.success("Invoice created successfully for all students.", {
-        duration: STATUS_DISMISS_DELAY,
-      });
+      notifyInvoiceCreated("Invoice created successfully for all students.");
 
       setInvoiceModalOpen(false);
     } catch (error) {
@@ -198,7 +192,7 @@ function Configuration() {
 
     return students.filter((st) => {
       const name = fullName(st).toLowerCase();
-      const idStr = String(st.id ?? st._id ?? st.uuid ?? "").toLowerCase();
+      const idStr = String(st.id ?? st.uuid ?? "").toLowerCase();
       const clsPair = (st?.group?.class_pair || "").trim();
       const matchesQuery = q
         ? name.includes(q) ||
@@ -218,51 +212,64 @@ function Configuration() {
     if (!student || !code) return;
 
     const studentId = student.student_id ?? student.id;
-    if (!studentId) {
-      // toast error missing student identifier
-      console.error("Missing student identifier");
+    const studentGroupId =
+      student.student_group_id ?? student.group_id ?? student.group?.id;
+
+    if (!studentId || !studentGroupId) {
+      console.error("Missing student identifiers");
       return;
     }
 
     const existingCodes = getStudentBillingCodes(student);
-    const codesSet = new Set(existingCodes);
+    const tuitionAmount = extractTuitionAmountFromCode(code);
+    const allowedAmount = getAllowedTuitionAmount(student);
 
-    if (nextChecked) {
-      codesSet.add(code);
-    } else {
-      if (!codesSet.has(code)) {
+    let updatedCodes;
+
+    if (tuitionAmount !== null) {
+      // Enforce correct tuition code by class (4th -> 2300, others -> 2600).
+      if (tuitionAmount !== allowedAmount) {
+        toast.error(
+          "4th classes must use tuition/2300; higher classes use tuition/2600."
+        );
         return;
       }
-      codesSet.delete(code);
+
+      const nonTuitionCodes = existingCodes.filter(
+        (c) => extractTuitionAmountFromCode(c) === null
+      );
+      const nextSet = new Set(nonTuitionCodes);
+      if (nextChecked) {
+        nextSet.add(code);
+      }
+      updatedCodes = Array.from(nextSet);
+    } else {
+      const codesSet = new Set(existingCodes);
+      if (nextChecked) {
+        codesSet.add(code);
+      } else {
+        if (!codesSet.has(code)) {
+          return;
+        }
+        codesSet.delete(code);
+      }
+      updatedCodes = Array.from(codesSet);
     }
 
-    const updatedCodes = Array.from(codesSet);
     const key = `${studentId}-${code}`;
     setPendingAssignments((prev) => ({ ...prev, [key]: nextChecked }));
 
+    const billingIds = updatedCodes
+      .map((c) => billingByCode.get(c)?.id)
+      .filter(Boolean);
+
     try {
       await api.post(endpoints.ASSIGN_BILLING_CODE, {
-        student_id: studentId,
-        academic_year:
-          student.academic_year_label ||
-          student.academic_year ||
-          DEFAULT_ACADEMIC_YEAR,
-        billing_codes: updatedCodes,
+        student_group_id: studentGroupId,
+        billing_ids: billingIds,
       });
 
-      //show the fullname in bold
-      toast.custom((t) => (
-        <div
-          className={`${
-            t.visible ? "animate-enter" : "animate-leave"
-          } bg-white text-gray-900 px-4 py-2 rounded-lg shadow-lg flex items-center`}
-        >
-          <span>
-            Updated billing assignments for <strong>{fullName(student)}</strong>
-            .
-          </span>
-        </div>
-      ));
+      notifyBillingUpdate(fullName(student));
 
       // Update local student state
       setStudents((prevStudents) =>
@@ -271,7 +278,10 @@ function Configuration() {
           if (stId !== studentId) return st;
           return {
             ...st,
-            billings: updatedCodes.map((c) => ({ code: c })),
+            billings: updatedCodes.map((c) => ({
+              code: c,
+              id: billingByCode.get(c)?.id,
+            })),
           };
         })
       );
@@ -382,9 +392,9 @@ function Configuration() {
                 {/* Table header will show billing codes as options */}
                 <th className="px-4 py-3 text-left">Student</th>
                 <th className="px-4 py-3 text-left">Class</th>
-                {billings.map((b) => (
-                  <th key={b.code} className="px-4 py-3 text-center">
-                    {b.code}
+                {billingCodes.map((code, idx) => (
+                  <th key={`${code}-${idx}`} className="px-4 py-3 text-center">
+                    {code}
                   </th>
                 ))}
               </tr>
@@ -423,7 +433,13 @@ function Configuration() {
               {!loading &&
                 !error &&
                 filtered.map((st, idx) => {
-                  const id = st.student_id ?? `auto-${idx}`;
+                  const studentKey = st.student_id ?? st.id ?? `auto-${idx}`;
+                  const groupKey =
+                    st.student_group_id ??
+                    st.group_id ??
+                    st.group?.id ??
+                    `grp-${idx}`;
+                  const id = `${studentKey || "s"}-${groupKey || "g"}-${idx}`;
                   const zebra = idx % 2 === 1 ? "bg-gray-50/60" : "bg-white";
 
                   return (
@@ -444,8 +460,11 @@ function Configuration() {
                       <td className="px-4 py-4 text-gray-700">
                         {st?.group?.class_pair || "-"}
                       </td>
-                      {billingCodes.map((code) => (
-                        <td key={code} className="px-4 py-4 text-center">
+                      {billingCodes.map((code, cIdx) => (
+                        <td
+                          key={`${code}-${cIdx}`}
+                          className="px-4 py-4 text-center"
+                        >
                           {(() => {
                             const tuitionAmount =
                               extractTuitionAmountFromCode(code);
@@ -512,114 +531,28 @@ function Configuration() {
         )}
       </div>
 
-      {/* Card view (mobile) */}
-      <div className="space-y-3 md:hidden">
-        {loading && (
-          <div className="rounded-lg border border-gray-200 bg-white px-4 py-6 text-center text-gray-500">
-            Loading students...
-          </div>
-        )}
-        {error && !loading && (
-          <div className="rounded-lg border border-red-100 bg-red-50 px-4 py-6 text-center text-red-600">
-            {error}
-          </div>
-        )}
-        {!loading && !error && filtered.length === 0 && (
-          <div className="rounded-lg border border-gray-200 bg-white px-4 py-6 text-center text-gray-500">
-            No students found.
-          </div>
-        )}
-        {!loading &&
-          !error &&
-          filtered.map((st, idx) => (
-            <div
-              key={st.student_id ?? `card-${idx}`}
-              className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="font-semibold text-gray-900">{fullName(st)}</p>
-                  <p className="text-sm text-gray-500">
-                    Class: {st?.group?.class_pair || "-"}
-                  </p>
-                </div>
-              </div>
-              <div className="mt-4 space-y-3">
-                {billingCodes.map((code) => {
-                  const tuitionAmount = extractTuitionAmountFromCode(code);
-                  const allowedAmount = getAllowedTuitionAmount(st);
-                  const isTuitionCode = tuitionAmount !== null;
-                  const baseDisabled =
-                    isTuitionCode && tuitionAmount !== allowedAmount;
-                  const checked = studentHasBillingCode(st, code);
-                  const studentKey = st.student_id ?? st.id;
-                  const pendingKey = `${studentKey}-${code}`;
-                  const hasPendingEntry = Object.prototype.hasOwnProperty.call(
-                    pendingAssignments,
-                    pendingKey
-                  );
-                  const pendingValue = pendingAssignments[pendingKey];
-                  const effectiveChecked =
-                    typeof pendingValue === "boolean" ? pendingValue : checked;
-                  const isDisabled =
-                    hasPendingEntry || (baseDisabled && !checked);
-
-                  return (
-                    <label
-                      key={code}
-                      className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2"
-                    >
-                      <div>
-                        <p className="text-sm font-medium text-gray-800">
-                          {code}
-                        </p>
-                        {baseDisabled && !checked && (
-                          <p className="text-xs text-orange-500">
-                            Not available for this class
-                          </p>
-                        )}
-                      </div>
-                      <input
-                        type="checkbox"
-                        className={cn(
-                          "size-5 accent-blue-600",
-                          isDisabled
-                            ? "cursor-not-allowed opacity-40"
-                            : "cursor-pointer"
-                        )}
-                        disabled={isDisabled}
-                        checked={effectiveChecked}
-                        onChange={(event) => {
-                          if (!isDisabled) {
-                            handleAssignBillingCode(
-                              st,
-                              code,
-                              event.target.checked
-                            );
-                          }
-                        }}
-                      />
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        {loadingMore && (
-          <div className="rounded-lg border border-gray-200 bg-white px-4 py-3 text-center text-xs text-gray-500">
-            Loading more students...
-          </div>
-        )}
-        {!hasMore && !loadingMore && students.length > 0 && (
-          <div className="rounded-lg border border-gray-200 bg-white px-4 py-3 text-center text-xs text-gray-400">
-            End of list
-          </div>
-        )}
-      </div>
+      <MobileCards
+        filtered={filtered}
+        loading={loading}
+        error={error}
+        billingCodes={billingCodes}
+        pendingAssignments={pendingAssignments}
+        handleAssignBillingCode={handleAssignBillingCode}
+        fullName={fullName}
+        getAllowedTuitionAmount={getAllowedTuitionAmount}
+        extractTuitionAmountFromCode={extractTuitionAmountFromCode}
+        studentHasBillingCode={studentHasBillingCode}
+        loadingMore={loadingMore}
+        hasMore={hasMore}
+      />
 
       <div ref={bottomSentinelRef} className="h-2" />
     </div>
   );
+}
+
+function Configuration() {
+  return <ConfigurationContent />;
 }
 
 export default Configuration;

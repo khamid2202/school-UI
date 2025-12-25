@@ -65,12 +65,22 @@ function Navbar({ isExpanded, setIsExpanded }) {
         label: "Scores",
       },
       { to: "/timetable", icon: <Calendar size={20} />, label: "Timetable" },
+      // {
+      //   to: "/management/invoices",
+      //   icon: <Wrench size={20} />,
+      //   label: "Configuration",
+      // },
       {
-        to: "/configuration",
+        to: "/management",
         icon: <Wrench size={20} />,
-        label: "Configuration",
+        label: "AdminTools",
       },
-      { to: "/exams", icon: <ClipboardPenLine size={20} />, label: "Exams" },
+      // { to: "/exams", icon: <ClipboardPenLine size={20} />, label: "Exams" },
+      {
+        to: "/new-payments",
+        icon: <CreditCard size={20} />,
+        label: "New Payments",
+      },
       {
         to: "/home/my-classes",
         icon: <BookOpen size={20} />,
