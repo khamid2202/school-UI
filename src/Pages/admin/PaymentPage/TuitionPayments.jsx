@@ -76,7 +76,11 @@ export default function TuitionPayments({
             <div className="w-full md:w-1/3 text-center">
               <h1 className="text-2xl font-bold">Tuition Payments</h1>
               {meta?.academic_year && (
-                <p className="text-sm text-gray-500">{meta.academic_year}</p>
+                <p className="text-sm text-gray-500">
+                  {typeof meta.academic_year === "string"
+                    ? meta.academic_year
+                    : meta?.academic_year?.name || ""}
+                </p>
               )}
             </div>
 

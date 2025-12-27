@@ -11,6 +11,8 @@ node_modules
 dist
 dist-ssr
 *.local
+# PaymentNew should be ignored to prevent conflicts during development
+# src/Pages/admin/PaymentNew
 
 # Editor directories and files
 .vscode/*

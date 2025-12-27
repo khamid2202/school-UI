@@ -26,7 +26,7 @@ function useStudentsForClass(classInfo) {
       const filter = encodeURIComponent(
         JSON.stringify({ class_pairs: [classPair] })
       );
-      const url = `${endpoints.GET_STUDENTS_OF_CLASS}&filter=${filter}&include_group=1`;
+      const url = `${endpoints.GET_STUDENTS_OF_A_CLASS}&filter=${filter}&include_group=1`;
       const response = await api.get(url);
       const studentsData = response.data?.students || response.data?.data || [];
       setStudents(studentsData);
