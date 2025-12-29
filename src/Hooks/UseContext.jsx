@@ -45,6 +45,27 @@ export const GlobalProvider = ({ children }) => {
       item?.name ||
       "Unnamed";
 
+    // console.log("Item", item);
+    const discountsRaw = Array.isArray(item.discounts) ? item.discounts : [];
+
+    // Sum percent-based discounts when more than one exists; otherwise show single percent or names.
+    const percentValues = discountsRaw
+      .map((d) => (Number.isFinite(d?.percent) ? Number(d.percent) : null))
+      .filter((v) => v !== null);
+
+    let discountsDisplay = "";
+    if (percentValues.length > 1) {
+      const total = percentValues.reduce((acc, val) => acc + val, 0);
+      discountsDisplay = `${total}`;
+    } else if (percentValues.length === 1) {
+      discountsDisplay = `${percentValues[0]}`;
+    } else {
+      discountsDisplay = discountsRaw
+        .map((d) => d?.name || null)
+        .filter(Boolean)
+        .join(", ");
+    }
+
     return {
       id: item.student_id,
       student_id: item.student_id,
@@ -62,6 +83,8 @@ export const GlobalProvider = ({ children }) => {
       group: item.group,
       payments: item.payments || [],
       billings: item.billings || [],
+      discounts: discountsRaw,
+      discounts_display: discountsDisplay,
     };
   };
 

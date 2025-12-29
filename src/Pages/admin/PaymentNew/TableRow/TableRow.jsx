@@ -25,7 +25,9 @@ function TableRow({ student }) {
       </td>
       <td className="px-3 py-2 border ">{student.grade}</td>
       <td className="px-3 py-2 border ">{student.tutor}</td>
-      <td className="px-3 py-2 border text-gray-700 ">-</td>
+      <td className="px-3 py-2 border text-gray-700 ">
+        {student.discounts_display || "-"}
+      </td>
       {months.map((m) => (
         <TableCell key={m.key} value={student.payments?.[m.key]} />
       ))}
