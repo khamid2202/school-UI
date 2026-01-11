@@ -47,6 +47,6 @@ export const endpoints = {
   BILLING_CODES: `/billings`,
 
   //New payment endpoints
-  GET_ALL_STUDENTS_FOR_PAYMENTS: `/students?academic_year_id=1&include_group=1&include_invoices=1&include_billings=1&include_wallet=1&include_payments=1`,
+  GET_ALL_STUDENTS_FOR_PAYMENTS: `/students?academic_year_id=1&include_group=1&include_invoices=1&include_billings=1&include_wallet=1&include_payments=1&include_discounts=1`,
   GET_DORM_STUDENTS_FOR_PAYMENTS: `/students?academic_year_id=1&include_group=1&include_invoices=1&include_billings=1&include_wallet=1&include_payments=1&filter={"billing_codes":["dorm/700"]}`,
 };
