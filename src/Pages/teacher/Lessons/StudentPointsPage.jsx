@@ -5,9 +5,64 @@ import {
   useParams,
   useSearchParams,
 } from "react-router-dom";
-import { ArrowLeft, AlertCircle, CheckCircle, Loader } from "lucide-react";
-import { api } from "../../../Library/RequestMaker.jsx";
+import { ArrowLeft, Loader, X } from "lucide-react";
 import toast from "react-hot-toast";
+import { api } from "../../../Library/RequestMaker.jsx";
+
+const SCORE_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+function ScoreModal({ open, title, onClose, onSelect, loading }) {
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/40"
+        aria-label="Close"
+        onClick={onClose}
+        disabled={loading}
+      />
+
+      <div className="relative w-full max-w-sm rounded-xl bg-white shadow-xl border border-gray-200">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+          <h2 className="text-base font-semibold text-gray-900">{title}</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={loading}
+            className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50"
+            aria-label="Close"
+          >
+            <X className="w-4 h-4 text-gray-600" />
+          </button>
+        </div>
+
+        <div className="p-4">
+          <div className="grid grid-cols-5 gap-2">
+            {SCORE_OPTIONS.map((score) => (
+              <button
+                key={score}
+                type="button"
+                onClick={() => onSelect(score)}
+                disabled={loading}
+                className="h-10 rounded-lg border border-gray-200 bg-white text-gray-900 font-semibold hover:bg-gray-50 disabled:opacity-50"
+              >
+                {score}
+              </button>
+            ))}
+          </div>
+          {loading && (
+            <div className="mt-4 flex items-center justify-center gap-2 text-sm text-gray-600">
+              <Loader className="w-4 h-4 animate-spin" />
+              Saving...
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function StudentPointsPage() {
   const navigate = useNavigate();
@@ -17,301 +72,422 @@ function StudentPointsPage() {
 
   const lessonFromState = location.state?.lesson || {};
   const selectedDateFromState = location.state?.selectedDate;
+  const lessonDateFromState = lessonFromState?.date;
 
-  const selectedDate = useMemo(
-    () =>
-      searchParams.get("date") ||
-      selectedDateFromState ||
-      new Date().toISOString().split("T")[0],
-    [searchParams, selectedDateFromState]
-  );
+  const selectedDate = useMemo(() => {
+    const dateFromQuery = searchParams.get("date");
+    if (dateFromQuery) return dateFromQuery;
+    if (selectedDateFromState) return selectedDateFromState;
+    if (lessonDateFromState) return lessonDateFromState;
+    return new Date().toISOString().split("T")[0];
+  }, [searchParams, selectedDateFromState, lessonDateFromState]);
 
   const classLabel =
-    searchParams.get("class") || lessonFromState.class_pair || "";
-  const groupId =
-    searchParams.get("groupId") ||
-    lessonFromState.group_id ||
+    searchParams.get("class") ||
     lessonFromState.class_pair ||
-    "";
-  const lessonType =
-    searchParams.get("lessonType") ||
-    lessonFromState.lesson_type ||
-    lessonFromState.subject ||
-    "lesson";
-  const subjectId =
+    (lessonFromState.grade && lessonFromState.class
+      ? `${lessonFromState.grade}-${lessonFromState.class}`
+      : "");
+
+  const groupIdRaw =
+    searchParams.get("groupId") || lessonFromState.group_id || "";
+  const subjectIdRaw =
     searchParams.get("subjectId") || lessonFromState.subject_id || "";
 
+  const groupId = useMemo(() => {
+    const asString = String(groupIdRaw ?? "").trim();
+    if (!asString) return null;
+    return /^\d+$/.test(asString) ? Number(asString) : null;
+  }, [groupIdRaw]);
+
+  const subjectId = useMemo(() => {
+    const asString = String(subjectIdRaw ?? "").trim();
+    if (!asString) return null;
+    return /^\d+$/.test(asString) ? Number(asString) : null;
+  }, [subjectIdRaw]);
+
+  const [lessonData, setLessonData] = useState(null);
   const [students, setStudents] = useState([]);
+  const [pointsByStudent, setPointsByStudent] = useState({});
   const [loading, setLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState(null);
-  const [points, setPoints] = useState({}); // { studentId: { performance, homework } }
-  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [fetchError, setFetchError] = useState(null);
 
-  const lessonTitle = lessonFromState.subject || `Lesson ${lessonId}`;
-  const lessonTime =
-    lessonFromState.start_time && lessonFromState.end_time
-      ? `${lessonFromState.start_time} - ${lessonFromState.end_time}`
-      : lessonFromState.time_slot || "";
+  const [studentSearch, setStudentSearch] = useState("");
 
-  // Fetch students for the lesson's class/group with filters (date, class, lesson type)
-  useEffect(() => {
-    const fetchStudents = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        if (!groupId) {
-          setError("No class/group information available for this lesson.");
-          setStudents([]);
-          setLoading(false);
-          return;
-        }
+  const [activeCell, setActiveCell] = useState(null);
+  const [savingCellKey, setSavingCellKey] = useState(null);
 
-        const response = await api.get(`/students`, {
-          group_id: groupId,
-          academic_year_id: 1,
-          include_group: 1,
-          date: selectedDate,
-          class: classLabel,
-          lesson_type: lessonType,
-        });
+  const lessonTitle =
+    lessonFromState.subject || lessonData?.subject || "Lesson";
 
-        const studentList = response.data?.students || response.data || [];
-        const normalizedStudents = Array.isArray(studentList)
-          ? studentList
-          : [];
+  const lessonTime = useMemo(() => {
+    if (lessonFromState.start_time && lessonFromState.end_time) {
+      return `${lessonFromState.start_time} - ${lessonFromState.end_time}`;
+    }
+    if (lessonFromState.time_slot) return lessonFromState.time_slot;
+    if (lessonData?.time_slot?.start_time && lessonData?.time_slot?.end_time) {
+      return `${lessonData.time_slot.start_time} - ${lessonData.time_slot.end_time}`;
+    }
+    return "";
+  }, [lessonFromState, lessonData]);
 
-        const initialPoints = {};
-        normalizedStudents.forEach((student) => {
-          const studentId = student.id || student.student_id;
-          if (!studentId) return;
-
-          initialPoints[studentId] = {
-            performance:
-              student.performance_points ?? student.performance ?? null,
-            homework: student.homework_points ?? student.homework ?? null,
-          };
-        });
-
-        setStudents(normalizedStudents);
-        setPoints(initialPoints);
-      } catch (err) {
-        console.error("Failed to fetch students:", err);
-        setError("Failed to load students. Please try again.");
-        setStudents([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchStudents();
-  }, [groupId, selectedDate, classLabel, lessonType]);
-
-  const handlePointChange = (studentId, type, value) => {
-    setPoints((prev) => ({
-      ...prev,
-      [studentId]: {
-        ...prev[studentId],
-        [type]: value === "" ? null : parseInt(value, 10) || 0,
-      },
-    }));
+  const goBack = () => {
+    if (location.key !== "default") navigate(-1);
+    else navigate("/teacher/lessons");
   };
 
-  const handleSubmitPoints = async () => {
-    const pointsToSubmit = [];
+  const fetchLessonStudents = async () => {
+    setLoading(true);
+    setFetchError(null);
 
-    Object.entries(points).forEach(([studentId, pointsData]) => {
-      if (
-        pointsData?.performance !== null &&
-        pointsData?.performance !== undefined
-      ) {
-        pointsToSubmit.push({
-          student_id: parseInt(studentId, 10),
-          lesson_id: lessonId,
-          group_id: groupId,
-          subject_id: subjectId || lessonFromState.subject_id,
-          lesson_type: lessonType,
-          class: classLabel,
-          type: "performance",
-          value: pointsData.performance,
-          date: selectedDate,
-        });
+    try {
+      if (!subjectId) {
+        setStudents([]);
+        setLessonData(null);
+        setPointsByStudent({});
+        setFetchError("Missing subject_id for this lesson.");
+        return;
       }
 
-      if (pointsData?.homework !== null && pointsData?.homework !== undefined) {
-        pointsToSubmit.push({
-          student_id: parseInt(studentId, 10),
-          lesson_id: lessonId,
-          group_id: groupId,
-          subject_id: subjectId || lessonFromState.subject_id,
-          lesson_type: lessonType,
-          class: classLabel,
-          type: "homework",
-          value: pointsData.homework,
-          date: selectedDate,
-        });
+      const params = {
+        date: selectedDate,
+        subject_id: subjectId,
+      };
+      if (groupId) params.group_id = groupId;
+
+      const response = await api.get("/students/points/lesson", params);
+      const responseData = Array.isArray(response.data?.data)
+        ? response.data.data
+        : [];
+
+      const dayData = responseData.find((d) => d.date === selectedDate);
+      const lessons = dayData?.lessons || [];
+      if (lessons.length === 0) {
+        setStudents([]);
+        setLessonData(null);
+        setPointsByStudent({});
+        return;
       }
+
+      let targetLesson = lessons[0];
+      if (groupId) {
+        const match = lessons.find(
+          (l) => String(l.group_id) === String(groupId)
+        );
+        if (match) targetLesson = match;
+      }
+
+      setLessonData(targetLesson);
+
+      const studentList = targetLesson.students || [];
+      setStudents(studentList);
+
+      const mapped = {};
+      studentList.forEach((student) => {
+        const studentId = student.student_id || student.id;
+        if (!studentId) return;
+
+        const point = student.point || {};
+        const hw = point.homework;
+        const pf = point.performance;
+
+        mapped[studentId] = {
+          homework: hw?.points ?? null,
+          performance: pf?.points ?? null,
+          homeworkId: hw?.id ?? null,
+          performanceId: pf?.id ?? null,
+        };
+      });
+      setPointsByStudent(mapped);
+    } catch (err) {
+      console.error("Failed to fetch lesson students:", err);
+      setFetchError("Failed to load students. Please try again.");
+      setStudents([]);
+      setLessonData(null);
+      setPointsByStudent({});
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLessonStudents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDate, subjectId, groupId, lessonId]);
+
+  const getStudentName = (student, index) => {
+    return student.full_name || student.fullName || `Student ${index + 1}`;
+  };
+
+  const filteredStudents = useMemo(() => {
+    const q = String(studentSearch || "")
+      .trim()
+      .toLowerCase();
+    if (!q) return students;
+
+    return students.filter((student, index) => {
+      const name = getStudentName(student, index);
+      const nickname = student.nickname || "";
+      return `${name} ${nickname}`.toLowerCase().includes(q);
     });
+  }, [students, studentSearch]);
 
-    if (pointsToSubmit.length === 0) {
-      toast.error("Please enter at least one point value");
+  const openCell = (studentId, category) => {
+    setActiveCell({ studentId, category });
+  };
+
+  const closeModal = () => {
+    if (savingCellKey) return;
+    setActiveCell(null);
+  };
+
+  const saveScore = async (score) => {
+    if (!activeCell) return;
+
+    const { studentId, category } = activeCell;
+    const cellKey = `${studentId}:${category}`;
+
+    if (!subjectId) {
+      toast.error("Missing subject_id");
       return;
     }
 
-    setSubmitting(true);
-    setError(null);
+    setSavingCellKey(cellKey);
+
+    const existing = pointsByStudent[studentId] || {};
+    const existingId =
+      category === "homework" ? existing.homeworkId : existing.performanceId;
+
+    const payload = {
+      student_id: Number(studentId),
+      group_id: groupId,
+      subject_id: subjectId,
+      points: score,
+      reason: category,
+      date: selectedDate,
+    };
 
     try {
-      await Promise.all(
-        pointsToSubmit.map((pointData) => api.post("/points", pointData))
+      if (existingId) {
+        await api.patch(`/students/points/${existingId}`, payload);
+
+        setPointsByStudent((prev) => ({
+          ...prev,
+          [studentId]: {
+            ...prev[studentId],
+            [category]: score,
+          },
+        }));
+      } else {
+        const res = await api.post("/students/points", payload);
+        const createdId = res?.data?.id ?? res?.data?.data?.id ?? null;
+
+        setPointsByStudent((prev) => ({
+          ...prev,
+          [studentId]: {
+            ...(prev[studentId] || {}),
+            [category]: score,
+            ...(category === "homework"
+              ? { homeworkId: createdId }
+              : { performanceId: createdId }),
+          },
+        }));
+
+        if (!createdId) {
+          // If backend doesn't return created ID, refetch to keep update IDs in sync.
+          await fetchLessonStudents();
+        }
+      }
+
+      toast.success(
+        `${category === "homework" ? "Homework" : "Performance"} saved`
       );
 
-      setSubmitSuccess(true);
-      toast.success("Points submitted successfully");
+      setActiveCell(null);
     } catch (err) {
-      console.error("Failed to submit points:", err);
-      setError(
-        err?.response?.data?.message ||
-          "Failed to submit points. Please try again."
-      );
-      toast.error("Failed to submit points");
+      console.error("Failed to save score:", err);
+      toast.error("Failed to save points");
     } finally {
-      setSubmitting(false);
-      setTimeout(() => setSubmitSuccess(false), 2000);
+      setSavingCellKey(null);
     }
   };
 
-  const goBack = () => {
-    if (location.key !== "default") {
-      navigate(-1);
-    } else {
-      navigate("/teacher/lessons");
-    }
-  };
+  const modalTitle = useMemo(() => {
+    if (!activeCell) return "";
+    return activeCell.category === "homework" ? "Homework" : "Performance";
+  }, [activeCell]);
+
+  const modalLoading = useMemo(() => {
+    if (!activeCell) return false;
+    const key = `${activeCell.studentId}:${activeCell.category}`;
+    return savingCellKey === key;
+  }, [activeCell, savingCellKey]);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
+    <div className="min-h-screen">
       <div className="max-w-6xl mx-auto">
-        <div className="flex items-center gap-3 mb-6">
-          <button
-            onClick={goBack}
-            className="p-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-100 transition"
-            aria-label="Back to lessons"
-          >
-            <ArrowLeft className="w-5 h-5 text-gray-700" />
-          </button>
-          <div>
-            <p className="text-sm text-gray-500">Date: {selectedDate}</p>
-            <h1 className="text-2xl font-bold text-gray-900">{lessonTitle}</h1>
-            <p className="text-sm text-gray-600">
-              {classLabel ? `${classLabel} • ` : ""}
-              {lessonTime}
-            </p>
-          </div>
-        </div>
+        <header className="mb-6">
+          <div className="flex items-start gap-3">
+            <button
+              onClick={goBack}
+              className="p-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-100 transition"
+              aria-label="Back"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-700" />
+            </button>
 
-        {submitSuccess && (
-          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
-            <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
-            <p className="text-sm font-medium text-green-700">
-              Points submitted successfully!
-            </p>
-          </div>
-        )}
-
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-            <div>
-              <h3 className="font-semibold text-red-900">Error</h3>
-              <p className="text-sm text-red-700">{error}</p>
+            <div className="min-w-0">
+              <h1 className="text-2xl font-bold text-gray-900 truncate">
+                {classLabel || "Class"}
+              </h1>
+              <p className="text-sm text-gray-600">
+                {lessonTime ? lessonTime + " • " : ""}
+                {selectedDate}
+              </p>
+              <p className="text-sm text-gray-500 truncate">{lessonTitle}</p>
             </div>
+          </div>
+
+          {students.length > 0 && (
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="relative w-full sm:max-w-sm">
+                <input
+                  value={studentSearch}
+                  onChange={(e) => setStudentSearch(e.target.value)}
+                  placeholder="Search students..."
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                />
+                {studentSearch.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => setStudentSearch("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-gray-100"
+                    aria-label="Clear search"
+                  >
+                    <X className="w-4 h-4 text-gray-500" />
+                  </button>
+                )}
+              </div>
+
+              <div className="text-sm text-gray-600">
+                Showing {filteredStudents.length} of {students.length}
+              </div>
+            </div>
+          )}
+        </header>
+
+        {fetchError && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+            {fetchError}
           </div>
         )}
 
         {loading && (
-          <div className="flex items-center justify-center p-8">
+          <div className="flex items-center justify-center p-12">
             <Loader className="w-6 h-6 text-blue-600 animate-spin" />
             <p className="ml-3 text-gray-600">Loading students...</p>
           </div>
         )}
 
-        {!loading && students.length === 0 && !error && (
-          <div className="bg-white rounded-lg shadow p-8 text-center">
-            <p className="text-gray-600">No students found for this lesson.</p>
-          </div>
-        )}
-
-        {!loading && students.length > 0 && (
-          <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-            {/* Table view for md+ */}
-            <div className="hidden sm:block overflow-x-auto">
+        {!loading && filteredStudents.length > 0 && (
+          <div className="bg-white rounded-lg shadow overflow-hidden">
+            <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200 bg-gray-50">
-                    <th className="px-4 py-3 text-left font-semibold text-gray-700">
-                      Student Name
+                    <th className="px-4 py-3 text-left font-semibold text-gray-700 w-1/2">
+                      Student
                     </th>
-                    <th className="px-4 py-3 text-center font-semibold text-gray-700">
-                      Performance Points
+                    <th className="px-4 py-3 text-center font-semibold text-gray-700 w-1/4">
+                      Homework
                     </th>
-                    <th className="px-4 py-3 text-center font-semibold text-gray-700">
-                      Homework Points
+                    <th className="px-4 py-3 text-center font-semibold text-gray-700 w-1/4">
+                      Performance
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {students.map((student, index) => {
-                    const studentId = student.id || student.student_id;
-                    const studentName =
-                      student.full_name ||
-                      student.fullName ||
-                      `Student ${index + 1}`;
-                    const studentPoints = points[studentId] || {};
+                  {filteredStudents.map((student, index) => {
+                    const studentId = student.student_id || student.id;
+                    const studentName = getStudentName(student, index);
+                    const row = pointsByStudent[studentId] || {};
+
+                    const homeworkValue = row.homework;
+                    const performanceValue = row.performance;
+
+                    const homeworkKey = `${studentId}:homework`;
+                    const performanceKey = `${studentId}:performance`;
+
+                    const homeworkSaving = savingCellKey === homeworkKey;
+                    const performanceSaving = savingCellKey === performanceKey;
 
                     return (
                       <tr
                         key={studentId || index}
                         className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
                       >
-                        <td className="px-4 py-3 text-gray-900">
-                          {studentName}
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            {student.picture ? (
+                              <img
+                                src={student.picture}
+                                alt={studentName}
+                                className="w-9 h-9 rounded-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 text-sm font-semibold">
+                                {studentName.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <p className="font-semibold text-gray-900 truncate">
+                                {studentName}
+                              </p>
+                              {student.nickname && (
+                                <p className="text-xs text-gray-500 truncate">
+                                  {student.nickname}
+                                </p>
+                              )}
+                            </div>
+                          </div>
                         </td>
+
                         <td className="px-4 py-3 text-center">
-                          <input
-                            type="number"
-                            min="0"
-                            max="100"
-                            value={studentPoints.performance ?? ""}
-                            onChange={(e) =>
-                              handlePointChange(
-                                studentId,
-                                "performance",
-                                e.target.value
-                              )
-                            }
-                            disabled={submitting}
-                            placeholder="0"
-                            className="w-20 px-2 py-1 border border-gray-300 rounded text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-                          />
+                          <button
+                            type="button"
+                            onClick={() => openCell(studentId, "homework")}
+                            disabled={homeworkSaving}
+                            className="inline-flex items-center justify-center min-w-16 px-3 py-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 transition font-semibold text-gray-900 disabled:opacity-50"
+                            aria-label={`Set homework points for ${studentName}`}
+                          >
+                            {homeworkSaving ? (
+                              <Loader className="w-4 h-4 animate-spin text-blue-600" />
+                            ) : homeworkValue !== null &&
+                              homeworkValue !== undefined ? (
+                              homeworkValue
+                            ) : (
+                              "—"
+                            )}
+                          </button>
                         </td>
+
                         <td className="px-4 py-3 text-center">
-                          <input
-                            type="number"
-                            min="0"
-                            max="100"
-                            value={studentPoints.homework ?? ""}
-                            onChange={(e) =>
-                              handlePointChange(
-                                studentId,
-                                "homework",
-                                e.target.value
-                              )
-                            }
-                            disabled={submitting}
-                            placeholder="0"
-                            className="w-20 px-2 py-1 border border-gray-300 rounded text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-                          />
+                          <button
+                            type="button"
+                            onClick={() => openCell(studentId, "performance")}
+                            disabled={performanceSaving}
+                            className="inline-flex items-center justify-center min-w-16 px-3 py-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 transition font-semibold text-gray-900 disabled:opacity-50"
+                            aria-label={`Set performance points for ${studentName}`}
+                          >
+                            {performanceSaving ? (
+                              <Loader className="w-4 h-4 animate-spin text-purple-600" />
+                            ) : performanceValue !== null &&
+                              performanceValue !== undefined ? (
+                              performanceValue
+                            ) : (
+                              "—"
+                            )}
+                          </button>
                         </td>
                       </tr>
                     );
@@ -319,97 +495,31 @@ function StudentPointsPage() {
                 </tbody>
               </table>
             </div>
-
-            {/* Card view for mobile */}
-            <div className="sm:hidden space-y-3">
-              {students.map((student, index) => {
-                const studentId = student.id || student.student_id;
-                const studentName =
-                  student.full_name ||
-                  student.fullName ||
-                  `Student ${index + 1}`;
-                const studentPoints = points[studentId] || {};
-
-                return (
-                  <div
-                    key={studentId || index}
-                    className="border border-gray-200 rounded-lg p-3 bg-white shadow-sm"
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <p className="font-semibold text-gray-900 text-sm">
-                        {studentName}
-                      </p>
-                      <span className="text-xs text-gray-500">
-                        ID: {studentId}
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-1 xs:grid-cols-2 gap-3">
-                      <div className="flex flex-col gap-1">
-                        <span className="text-xs font-semibold text-gray-700">
-                          Performance
-                        </span>
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={studentPoints.performance ?? ""}
-                          onChange={(e) =>
-                            handlePointChange(
-                              studentId,
-                              "performance",
-                              e.target.value
-                            )
-                          }
-                          disabled={submitting}
-                          placeholder="0"
-                          className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-                        />
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <span className="text-xs font-semibold text-gray-700">
-                          Homework
-                        </span>
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={studentPoints.homework ?? ""}
-                          onChange={(e) =>
-                            handlePointChange(
-                              studentId,
-                              "homework",
-                              e.target.value
-                            )
-                          }
-                          disabled={submitting}
-                          placeholder="0"
-                          className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="mt-6 flex flex-col sm:flex-row gap-3">
-              <button
-                onClick={handleSubmitPoints}
-                disabled={submitting || loading}
-                className="w-full sm:flex-1 bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {submitting && <Loader className="w-4 h-4 animate-spin" />}
-                {submitting ? "Submitting..." : "Submit Points"}
-              </button>
-              <button
-                onClick={goBack}
-                className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
           </div>
         )}
+
+        {!loading &&
+          !fetchError &&
+          students.length > 0 &&
+          filteredStudents.length === 0 && (
+            <div className="bg-white rounded-lg shadow p-8 text-center text-gray-600">
+              No students match your search.
+            </div>
+          )}
+
+        {!loading && !fetchError && students.length === 0 && (
+          <div className="bg-white rounded-lg shadow p-8 text-center text-gray-600">
+            No students found for this class.
+          </div>
+        )}
+
+        <ScoreModal
+          open={!!activeCell}
+          title={modalTitle}
+          onClose={closeModal}
+          onSelect={saveScore}
+          loading={modalLoading}
+        />
       </div>
     </div>
   );

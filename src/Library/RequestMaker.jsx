@@ -2,9 +2,37 @@ import axios from "axios";
 
 const baseUrl = import.meta.env?.VITE_API_BASE_URL || "http://localhost:3000";
 
+// Custom params serializer: arrays become repeated keys (group_ids=1&group_ids=2)
+// instead of bracket notation (group_ids[]=1) which NestJS may reject.
+function serializeParams(params) {
+  const parts = [];
+  for (const key in params) {
+    const value = params[key];
+    if (value === undefined || value === null) continue;
+    if (Array.isArray(value)) {
+      value.forEach((v) => {
+        if (v !== undefined && v !== null) {
+          parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(v)}`);
+        }
+      });
+    } else if (typeof value === "object") {
+      // For objects like filter/sort, JSON-stringify them
+      parts.push(
+        `${encodeURIComponent(key)}=${encodeURIComponent(
+          JSON.stringify(value)
+        )}`
+      );
+    } else {
+      parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
+    }
+  }
+  return parts.join("&");
+}
+
 const requestMaker = axios.create({
   baseURL: baseUrl,
   withCredentials: true,
+  paramsSerializer: serializeParams,
 });
 
 // Helper to merge optional headers / config

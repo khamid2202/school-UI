@@ -74,20 +74,25 @@ function Timetable() {
       try {
         const params = { academic_year_id: 1 };
 
-        // Add filters based on view mode
-        // Send as comma-separated string, not array
+        // Add filters based on view mode.
+        // Backend expects arrays with .length checks, so wrap in arrays.
         if (viewMode === "class" && selectedGroupId) {
-          params.group_ids = String(selectedGroupId);
+          const groupIdNum = Number(selectedGroupId);
+          if (Number.isFinite(groupIdNum)) params.group_ids = [groupIdNum];
         } else if (viewMode === "teacher" && selectedTeacherId) {
-          params.teacher_ids = String(selectedTeacherId);
+          const teacherIdNum = Number(selectedTeacherId);
+          if (Number.isFinite(teacherIdNum))
+            params.teacher_ids = [teacherIdNum];
         }
 
         // Add day filter if specific day selected
         if (dayFilter !== "all") {
-          params.days = String(DAY_MAP[dayFilter]);
+          const dayIndex = DAY_MAP[dayFilter];
+          if (dayIndex !== undefined && dayIndex !== null) {
+            params.days = [dayIndex];
+          }
         }
 
-        console.log("paramsssssssss:", params);
         const timetableRes = await api.get(endpoints.TIMETABLE, params);
         const timetable = timetableRes.data?.timetable || [];
 
@@ -95,11 +100,11 @@ function Timetable() {
         const transformedData = timetable.map((item) => ({
           ...item,
           // Add day_index if missing
-          day_index: item.day_index || DAY_MAP[item.day],
+          day_index: item.day_index ?? DAY_MAP[item.day],
           // Add time_id: create unique ID from time_slot
-          time_id: item.time_id || `${item.start_time}-${item.end_time}`,
+          time_id: item.time_id ?? `${item.start_time}-${item.end_time}`,
           // Add group_id: use the lesson id or create from grade+class
-          group_id: item.group_id || `${item.grade}-${item.class}`,
+          group_id: item.group_id ?? `${item.grade}-${item.class}`,
         }));
 
         // console.log("timetable:", transformedData);
