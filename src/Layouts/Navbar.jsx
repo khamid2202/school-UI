@@ -65,11 +65,6 @@ function Navbar({ isExpanded, setIsExpanded }) {
         label: "Scores",
       },
       { to: "/timetable", icon: <Calendar size={20} />, label: "Timetable" },
-      // {
-      //   to: "/management/invoices",
-      //   icon: <Wrench size={20} />,
-      //   label: "Configuration",
-      // },
       {
         to: "/management",
         icon: <Wrench size={20} />,
@@ -84,7 +79,12 @@ function Navbar({ isExpanded, setIsExpanded }) {
       {
         to: "/home/my-classes",
         icon: <BookOpen size={20} />,
-        label: "My Classes",
+        label: "Classes",
+      },
+      {
+        to: "/teacher/lessons",
+        icon: <ClipboardPenLine size={20} />,
+        label: "Lessons",
       },
     ];
 
@@ -99,7 +99,8 @@ function Navbar({ isExpanded, setIsExpanded }) {
         (item) =>
           item.to === "/home" ||
           item.to === "/exams" ||
-          item.to === "/home/my-classes"
+          item.to === "/home/my-classes" ||
+          item.to === "/teacher/lessons"
       );
     }
 
