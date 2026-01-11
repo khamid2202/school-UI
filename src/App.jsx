@@ -20,6 +20,7 @@ import Exams from "./Pages/admin/Exams/Exams.jsx";
 import MyClasses from "./Pages/teacher/MyClasses/MyClasses.jsx";
 import MyLessons from "./Pages/teacher/MyClasses/MyLessons.jsx";
 import TeacherLessonsPage from "./Pages/teacher/Lessons/TeacherLessonsPage.jsx";
+import StudentPointsPage from "./Pages/teacher/Lessons/StudentPointsPage.jsx";
 import { Toaster } from "react-hot-toast";
 import Tools from "./Pages/admin/Tools/Tools";
 import PaymentsPage from "./Pages/admin/PaymentNew/Paymentspage/PaymentsPage.jsx";
@@ -89,6 +90,10 @@ function App() {
             <Route path="/home/my-classes" element={<MyClasses />} />
             <Route path="/home/my-classes/my-lessons" element={<MyLessons />} />
             <Route path="/teacher/lessons" element={<TeacherLessonsPage />} />
+            <Route
+              path="/teacher/lessons/:lessonId/students"
+              element={<StudentPointsPage />}
+            />
             <Route path="/tools" element={<Tools />} />
             <Route path="/new-payments" element={<PaymentsPage />} />
             <Route

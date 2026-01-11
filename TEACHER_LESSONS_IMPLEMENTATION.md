@@ -29,15 +29,13 @@ The Teacher Lessons page allows teachers to:
 - Click a lesson to open the student points modal
 - Empty state when no lessons are scheduled
 
-### ✅ Student Points Modal
-- **File**: `src/Pages/teacher/Lessons/StudentPointsModal.jsx`
-- Opens when a lesson is clicked
-- Fetches students for the lesson's group
-- Displays a table with:
-  - Student name
-  - Performance points input (0-100)
-  - Homework points input (0-100)
-- Submit button sends all points to `/points` endpoint
+### ✅ Student Points Page
+- **File**: `src/Pages/teacher/Lessons/StudentPointsPage.jsx`
+- Opens in its own route when a lesson is clicked
+- Fetches students for the lesson's class/group with filters (date, lesson type, class)
+- Prefills any existing performance/homework points returned by the backend
+- Displays table (desktop) and cards (mobile) for entering performance/homework points
+- Submit button sends all points to `/points` with date, class, lesson type, and subject
 - Shows loading, error, and success states
 - Prevents duplicate submissions with disabled state
 
@@ -90,6 +88,7 @@ src/Pages/teacher/Lessons/
 Added to `src/App.jsx`:
 ```
 Route path="/teacher/lessons" → TeacherLessonsPage
+Route path="/teacher/lessons/:lessonId/students" → StudentPointsPage
 ```
 
 ## UI Components Used

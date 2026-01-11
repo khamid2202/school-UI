@@ -1,10 +1,9 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { Calendar, AlertCircle, Loader } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { AlertCircle, Loader } from "lucide-react";
 import { api } from "../../../Library/RequestMaker.jsx";
 import DaySelector from "./DaySelector.jsx";
 import LessonsList from "./LessonsList.jsx";
-import StudentPointsModal from "./StudentPointsModal.jsx";
-import toast from "react-hot-toast";
 
 function TeacherLessonsPage() {
   const [selectedDate, setSelectedDate] = useState(() => {
@@ -15,8 +14,7 @@ function TeacherLessonsPage() {
   const [lessons, setLessons] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [selectedLesson, setSelectedLesson] = useState(null);
-  const [showModal, setShowModal] = useState(false);
+  const navigate = useNavigate();
 
   // Fetch lessons for the selected date
   const fetchLessons = useCallback(async (date) => {
@@ -46,23 +44,23 @@ function TeacherLessonsPage() {
 
   const handleDayChange = (newDate) => {
     setSelectedDate(newDate);
-    setSelectedLesson(null); // Clear selected lesson when changing day
   };
 
   const handleLessonClick = (lesson) => {
-    setSelectedLesson(lesson);
-    setShowModal(true);
-  };
+    const query = new URLSearchParams({
+      date: selectedDate,
+      class: lesson.class_pair || `${lesson.grade || ""}-${lesson.class || ""}`,
+      groupId: lesson.group_id || lesson.class_pair || "",
+      lessonType: lesson.lesson_type || lesson.subject || "lesson",
+      subjectId: lesson.subject_id || "",
+    }).toString();
 
-  const handleModalClose = () => {
-    setShowModal(false);
-    setSelectedLesson(null);
-  };
-
-  const handlePointsSubmitted = () => {
-    // Refresh lessons after points are submitted
-    toast.success("Points submitted successfully!");
-    handleModalClose();
+    navigate(`/teacher/lessons/${lesson.id}/students?${query}`, {
+      state: {
+        lesson,
+        selectedDate,
+      },
+    });
   };
 
   return (
@@ -109,16 +107,6 @@ function TeacherLessonsPage() {
           lessons={lessons}
           onLessonClick={handleLessonClick}
           selectedDate={selectedDate}
-        />
-      )}
-
-      {/* Student Points Modal */}
-      {showModal && selectedLesson && (
-        <StudentPointsModal
-          lesson={selectedLesson}
-          isOpen={showModal}
-          onClose={handleModalClose}
-          onPointsSubmitted={handlePointsSubmitted}
         />
       )}
     </div>
