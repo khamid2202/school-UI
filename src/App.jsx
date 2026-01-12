@@ -9,7 +9,7 @@ import Login from "./Pages/auth/Login/Login";
 import LandingPage from "./Pages/admin/LandingPage/LandingPage";
 import LayoutWithHeader from "./Layouts/Layout";
 import ProtectedRoute from "./Pages/auth/ProtectedRoute";
-import { Payments } from "./Pages/admin/PaymentPage/Payments";
+
 import Classes from "./Pages/admin/Groups/Classes";
 import Teachers from "./Pages/admin/Teachers/Teachers.jsx";
 import ClassSubjects from "./Pages/admin/ScoresForAdmin/ClassessSubjects";
@@ -73,9 +73,8 @@ function App() {
             }
           >
             <Route path="/home" element={<LandingPage />} />
-            <Route path="/payments" element={<Payments />} />
+            {/* <Route path="/payments" element={<Payments />} /> */}
             <Route path="/management" element={<AdminTools />} />
-            {/* <Route path="/management/invoices" element={<Configuration />} /> */}
             <Route path="/management/discounts" element={<Discounts />} />
             <Route path="/classes" element={<Classes />} />
             <Route path="/class-management" element={<ClassManagement />} />

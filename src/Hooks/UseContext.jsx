@@ -22,8 +22,8 @@ export const GlobalProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
-  const [meta, setMeta] = useState(null);
   const [page, setPage] = useState(1);
+  const [meta, setMeta] = useState(null);
   const [dormStudents, setDormStudents] = useState([]);
   const [loadingDorm, setLoadingDorm] = useState(false);
   const [loadingMoreDorm, setLoadingMoreDorm] = useState(false);
@@ -33,82 +33,119 @@ export const GlobalProvider = ({ children }) => {
   const [selectedPurpose, setSelectedPurpose] = useState("tuition");
   const [billings, setBillings] = useState([]);
   const [classes, setClasses] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const normalizeStudent = (item) => {
-    const classPair =
-      item?.group?.class_pair ||
-      [item?.group?.grade, item?.group?.class].filter(Boolean).join("-");
+  // Deduplicate students by student_id.
+  const deduplicateRaw = (list) => {
+    const seen = new Map();
+    list.forEach((st) => {
+      const key = st.student_id;
+      if (key != null) {
+        // Keep the latest entry (in case of updates)
+        seen.set(key, st);
+      }
+    });
+    return Array.from(seen.values());
+  };
 
-    const resolvedFullName =
-      [item?.first_name, item?.last_name].filter(Boolean).join(" ") ||
-      item?.full_name ||
-      item?.name ||
-      "Unnamed";
+  // Normalize discounts array to a display-friendly string.
+  const normalizeDiscounts = (discounts) => {
+    if (!Array.isArray(discounts) || discounts.length === 0) return "-";
 
-    // console.log("Item", item);
-    const discountsRaw = Array.isArray(item.discounts) ? item.discounts : [];
-
-    // Sum percent-based discounts when more than one exists; otherwise show single percent or names.
-    const percentValues = discountsRaw
+    const percentValues = discounts
       .map((d) => (Number.isFinite(d?.percent) ? Number(d.percent) : null))
       .filter((v) => v !== null);
 
-    let discountsDisplay = "";
     if (percentValues.length > 1) {
       const total = percentValues.reduce((acc, val) => acc + val, 0);
-      discountsDisplay = `${total}`;
+      return `${total}%`;
     } else if (percentValues.length === 1) {
-      discountsDisplay = `${percentValues[0]}`;
+      return `${percentValues[0]}%`;
     } else {
-      discountsDisplay = discountsRaw
+      const names = discounts
         .map((d) => d?.name || null)
         .filter(Boolean)
         .join(", ");
+      return names || "-";
     }
+  };
 
-    return {
-      id: item.student_id,
-      student_id: item.student_id,
-      student_group_id: item.student_group_id,
-      fullName: resolvedFullName,
-      full_name: item?.full_name,
-      first_name: item?.first_name,
-      last_name: item?.last_name,
-      name: item?.name,
-      grade: classPair,
-      class_pair: classPair,
-      class_pair_compact: item?.group?.class_pair_compact,
-      tutor: item?.group?.teacher_name || "",
-      status: item.status,
-      group: item.group,
-      payments: item.payments || [],
-      billings: item.billings || [],
-      discounts: discountsRaw,
-      discounts_display: discountsDisplay,
+  // Normalize invoices array to a month-keyed object with aggregated status.
+  const normalizeInvoices = (invoices) => {
+    if (!Array.isArray(invoices) || invoices.length === 0) return {};
+
+    const monthKey = {
+      1: "jan",
+      2: "feb",
+      3: "mar",
+      4: "apr",
+      5: "may",
+      6: "jun",
+      7: "jul",
+      8: "aug",
+      9: "sep",
+      10: "oct",
+      11: "nov",
+      12: "dec",
     };
-  };
 
-  const studentKey = (st) => {
-    const primary = st?.student_id ?? st?.id ?? st?.uuid ?? "unknown";
-    const groupPart =
-      st?.student_group_id ?? st?.group_id ?? st?.group?.id ?? "nogroup";
-    return `${primary}::${groupPart}`;
-  };
+    // Aggregate invoices per month
+    const invoiceTotals = {};
+    invoices.forEach((inv) => {
+      const key = monthKey[inv?.month];
+      if (!key) return;
 
-  const dedupeStudents = (list) => {
-    const seen = new Set();
-    const unique = [];
-    list.forEach((st) => {
-      const key = studentKey(st);
-      if (seen.has(key)) return;
-      seen.add(key);
-      unique.push(st);
+      const required = Number(inv?.total_required_amount) || 0;
+      const paid = Number(inv?.total_paid_amount) || 0;
+      const remainingRaw = inv?.remaining_amount;
+      const remaining =
+        remainingRaw === 0 || remainingRaw != null
+          ? Number(remainingRaw)
+          : Math.max(required - paid, 0);
+
+      const current = invoiceTotals[key] || {
+        required: 0,
+        paid: 0,
+        remaining: 0,
+      };
+
+      invoiceTotals[key] = {
+        required: current.required + required,
+        paid: current.paid + paid,
+        remaining: current.remaining + remaining,
+      };
     });
-    return unique;
+
+    // Calculate status for each month
+    const invoiceStatus = {};
+    Object.entries(invoiceTotals).forEach(([key, totals]) => {
+      const required = totals.required || 0;
+      const paid = totals.paid || 0;
+      const remaining = totals.remaining;
+
+      const percent = required > 0 ? Math.round((paid / required) * 100) : 0;
+
+      let status = "Not Paid";
+      if (remaining <= 0 || percent >= 100) {
+        status = "Paid";
+      } else if (paid > 0) {
+        status = "Not Full";
+      }
+
+      invoiceStatus[key] = {
+        status,
+        percent: Math.min(100, Math.max(0, percent)),
+        remaining,
+        required,
+        paid,
+      };
+    });
+
+    return invoiceStatus;
   };
 
   //STUDENTS FETCHING
-  const fetchStudents = async ({ page: nextPage = 1, append = false } = {}) => {
+  const fetchStudents = async (nextPage = 1, append = false) => {
     if (append) {
       setLoadingMore(true);
     } else {
@@ -116,14 +153,13 @@ export const GlobalProvider = ({ children }) => {
     }
     setError(null);
     try {
-      const res = await api.get(endpoints.GET_ALL_STUDENTS_FOR_PAYMENTS, {
+      const res = await api.get(endpoints.GET_STUDENTS_TO_TEST, {
         page: nextPage,
+        q: searchTerm || undefined,
       });
       const raw = res?.data?.students || [];
-      const normalized = raw.map(normalizeStudent);
-      setStudents((prev) =>
-        dedupeStudents(append ? [...prev, ...normalized] : normalized)
-      );
+      const unique = deduplicateRaw(raw);
+      setStudents((prev) => (append ? [...prev, ...unique] : unique));
       setMeta(res?.data?.meta || null);
       setPage(nextPage);
     } catch (err) {
@@ -133,12 +169,8 @@ export const GlobalProvider = ({ children }) => {
       setLoadingMore(false);
     }
   };
-
   //DORM STUDENTS
-  const fetchDormStudents = async ({
-    page: nextPage = 1,
-    append = false,
-  } = {}) => {
+  const fetchDormStudents = async (nextPage = 1, append = false) => {
     if (append) {
       setLoadingMoreDorm(true);
     } else {
@@ -148,12 +180,11 @@ export const GlobalProvider = ({ children }) => {
     try {
       const res = await api.get(endpoints.GET_DORM_STUDENTS_FOR_PAYMENTS, {
         page: nextPage,
+        q: searchTerm || undefined,
       });
       const raw = res?.data?.students || [];
-      const normalized = raw.map(normalizeStudent);
-      setDormStudents((prev) =>
-        dedupeStudents(append ? [...prev, ...normalized] : normalized)
-      );
+      const unique = deduplicateRaw(raw);
+      setDormStudents((prev) => (append ? [...prev, ...unique] : unique));
       setMetaDorm(res?.data?.meta || null);
       setPageDorm(nextPage);
     } catch (err) {
@@ -165,11 +196,14 @@ export const GlobalProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    fetchStudents();
-    fetchDormStudents();
     fetchBillings();
     fetchClasses();
   }, []);
+
+  useEffect(() => {
+    fetchStudents(1, false);
+    fetchDormStudents(1, false);
+  }, [searchTerm]);
 
   const hasMore = useMemo(() => {
     if (!meta) return false;
@@ -187,12 +221,12 @@ export const GlobalProvider = ({ children }) => {
 
   const loadMore = async () => {
     if (loading || loadingMore || !hasMore) return;
-    await fetchStudents({ page: page + 1, append: true });
+    await fetchStudents(page + 1, true);
   };
 
   const loadMoreDorm = async () => {
     if (loadingDorm || loadingMoreDorm || !hasMoreDorm) return;
-    await fetchDormStudents({ page: pageDorm + 1, append: true });
+    await fetchDormStudents(pageDorm + 1, true);
   };
 
   //BILLINGS
@@ -288,12 +322,15 @@ export const GlobalProvider = ({ children }) => {
       loadingMoreDorm,
       error,
       errorDorm,
-      refetch: fetchStudents,
-      refetchDorm: fetchDormStudents,
-      loadMore,
-      loadMoreDorm,
+      page,
+      setPage,
+      meta,
       hasMore,
       hasMoreDorm,
+      loadMore,
+      loadMoreDorm,
+      refetch: fetchStudents,
+      refetchDorm: fetchDormStudents,
       selectedPurpose,
       setSelectedPurpose,
       billings,
@@ -301,7 +338,11 @@ export const GlobalProvider = ({ children }) => {
       notifyInvoiceCreated,
       setClasses,
       classes,
+      searchTerm,
+      setSearchTerm,
       fetchClasses,
+      normalizeDiscounts,
+      normalizeInvoices,
     }),
     [
       currentUser,
@@ -315,11 +356,14 @@ export const GlobalProvider = ({ children }) => {
       loadingMoreDorm,
       error,
       errorDorm,
+      page,
+      meta,
       hasMore,
       hasMoreDorm,
       selectedPurpose,
       billings,
       classes,
+      searchTerm,
     ]
   );
 

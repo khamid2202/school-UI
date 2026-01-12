@@ -53,11 +53,7 @@ function Navbar({ isExpanded, setIsExpanded }) {
     const allItems = [
       { to: "/home", icon: <Home size={20} />, label: "Home" },
       { to: "/classes", icon: <BookOpen size={20} />, label: "Classes" },
-      {
-        to: "/payments",
-        icon: <CreditCard size={20} />,
-        label: "Payment",
-      },
+
       { to: "/teachers", icon: <Users size={20} />, label: "Tutors" },
       {
         to: "/classes-to-view",
@@ -65,6 +61,7 @@ function Navbar({ isExpanded, setIsExpanded }) {
         label: "Scores",
       },
       { to: "/timetable", icon: <Calendar size={20} />, label: "Timetable" },
+
       {
         to: "/management",
         icon: <Wrench size={20} />,

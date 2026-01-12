@@ -66,12 +66,7 @@ export default function TuitionPayments({
       <div className="flex-1 p-6 overflow-x-auto">
         <div className="mb-6">
           <div className="flex items-center gap-3 flex-wrap md:flex-nowrap">
-            <div className="w-full md:w-1/3 text-sm text-gray-500">
-              <span>
-                Showing {students.length} of {meta?.total ?? totalLoaded}{" "}
-                students
-              </span>
-            </div>
+            <div className="w-full md:w-1/3" />
 
             <div className="w-full md:w-1/3 text-center">
               <h1 className="text-2xl font-bold">Tuition Payments</h1>

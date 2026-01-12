@@ -13,6 +13,7 @@ function InvoiceTable({
   onToggleBilling,
   getAllowedTuitionAmount,
   extractTuitionAmountFromCode,
+  totalStudents = 0,
 }) {
   const sentinelRef = useRef(null);
 
@@ -103,7 +104,8 @@ function InvoiceTable({
 
       <div className="flex items-center justify-between border-t border-gray-100 px-4 py-3 text-xs text-gray-500">
         <span>
-          Showing {students.length} student{students.length === 1 ? "" : "s"}
+          Showing {students.length} of {totalStudents} student
+          {totalStudents === 1 ? "" : "s"}
         </span>
         <span className="text-gray-500">
           {loadingMore

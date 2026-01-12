@@ -13,7 +13,7 @@ function LayoutWithHeader() {
       <main
         className={`flex-1 transition-all duration-300 ${
           isExpanded ? "md:ml-56" : "md:ml-20"
-        } px-3 py-3 sm:px-6 sm:py-4 overflow-x-hidden overflow-y-auto max-w-full pb-24 md:pb-3`}
+        }  overflow-x-hidden overflow-y-auto max-w-full`}
       >
         <Outlet />
       </main>

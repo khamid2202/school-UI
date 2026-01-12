@@ -5,6 +5,7 @@ import { api } from "../../../../Library/RequestMaker";
 import { endpoints } from "../../../../Library/Endpoints";
 import InvoiceTable from "./InvoiceTable";
 import MobileCards from "./MobileCards";
+import CreateInvoiceModule from "./CreateInvoiceModule";
 
 const SPECIAL_TUITION_CLASSES = new Set(["4-A", "4-B"]);
 
@@ -42,48 +43,32 @@ const getStudentBillingCodes = (student) => {
 
 function New_Invoices() {
   const {
-    students = [],
+    students,
     setStudents,
     loading,
     loadingMore,
     error,
     hasMore,
     loadMore,
+    meta,
     billings = [],
     notifyBillingUpdate,
     notifyInvoiceCreated,
-    classes = [],
+    searchTerm,
+    setSearchTerm,
   } = useGlobalContext();
 
-  const [query, setQuery] = useState("");
-  const [selectedClasses, setSelectedClasses] = useState([]);
   const [pendingAssignments, setPendingAssignments] = useState({});
   const [creatingInvoices, setCreatingInvoices] = useState(false);
-  const invoiceMonth = useMemo(() => new Date().getMonth() + 1, []);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
-  const classOptions = useMemo(() => {
-    const collected = [];
+  const now = useMemo(() => new Date(), []);
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+  const [invoiceYear, setInvoiceYear] = useState(currentYear);
+  const [invoiceMonth, setInvoiceMonth] = useState(currentMonth);
 
-    if (Array.isArray(classes) && classes.length) {
-      classes.forEach((item) => {
-        if (typeof item === "string") {
-          collected.push(item);
-          return;
-        }
-        if (item?.class_pair) collected.push(item.class_pair);
-      });
-    }
-
-    if (!collected.length && Array.isArray(students)) {
-      students.forEach((st) => {
-        const pair = st?.group?.class_pair;
-        if (pair) collected.push(pair);
-      });
-    }
-
-    const unique = Array.from(new Set(collected.filter(Boolean)));
-    return unique.sort((a, b) => a.localeCompare(b));
-  }, [classes, students]);
+  const totalStudents = meta?.total ?? 0;
 
   const billingCodes = useMemo(() => {
     const seen = new Set();
@@ -106,47 +91,54 @@ function New_Invoices() {
   }, [billings]);
 
   const filteredStudents = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const hasClassFilter = selectedClasses.length > 0;
+    const q = searchTerm.trim().toLowerCase();
 
     return students.filter((st) => {
+      if (!q) return true;
       const name = fullName(st).toLowerCase();
-      const idStr = String(st.id ?? st.student_id ?? "").toLowerCase();
-      const cls = (st?.group?.class_pair || "").toLowerCase();
-      const matchesQuery = q
-        ? name.includes(q) || idStr.includes(q) || cls.includes(q)
-        : true;
-      const matchesClass = hasClassFilter
-        ? selectedClasses.includes(st?.group?.class_pair)
-        : true;
-      return matchesQuery && matchesClass;
-    });
-  }, [query, students, selectedClasses]);
+      const idStr = String(st.student_id ?? st.id ?? "").toLowerCase();
+      const classPair =
+        st?.group?.class_pair ||
+        [st?.group?.grade, st?.group?.class].filter(Boolean).join("-");
 
-  const handleCreateInvoices = async () => {
-    const confirmed = window.confirm(
-      "Create invoices for the current month based on the latest billing assignments?"
-    );
-    if (!confirmed) return;
+      return (
+        name.includes(q) ||
+        idStr.includes(q) ||
+        classPair.toLowerCase().includes(q)
+      );
+    });
+  }, [students, searchTerm]);
+
+  const handleCreateInvoices = async ({ year, month }) => {
+    if (!year || !month) {
+      toast.error("Year and month are required");
+      return;
+    }
 
     setCreatingInvoices(true);
-    const currentYear = new Date().getFullYear();
 
     try {
       await api.post(endpoints.CREATE_INVOICE, {
         academic_year_id: 1,
-        year: currentYear,
-        month: invoiceMonth,
+        year,
+        month,
       });
 
       notifyInvoiceCreated?.(
         "Invoices created successfully for the selected month."
       );
+      setShowCreateModal(false);
     } catch (err) {
       toast.error(err?.response?.data?.message || "Failed to create invoices.");
     } finally {
       setCreatingInvoices(false);
     }
+  };
+
+  const handleOpenCreateModal = () => {
+    setInvoiceYear(currentYear);
+    setInvoiceMonth(currentMonth);
+    setShowCreateModal(true);
   };
 
   const handleAssignBillingCode = async (student, code, nextChecked) => {
@@ -247,15 +239,15 @@ function New_Invoices() {
           <div className="w-full sm:w-80">
             <input
               type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search by name, ID, or class"
               className="w-full rounded-full border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <button
             type="button"
-            onClick={handleCreateInvoices}
+            onClick={handleOpenCreateModal}
             disabled={creatingInvoices}
             className={`inline-flex items-center justify-center rounded-full bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 hover:bg-blue-700 sm:w-auto ${
               creatingInvoices ? "cursor-not-allowed opacity-70" : ""
@@ -263,58 +255,6 @@ function New_Invoices() {
           >
             {creatingInvoices ? "Creating invoices..." : "Create invoices"}
           </button>
-        </div>
-      </div>
-      {/* classes */}
-      <div className="flex flex-wrap gap-2">
-        <div className="w-full rounded-2xl border border-gray-200 bg-white shadow-sm">
-          <div className="flex items-center justify-between px-4 py-3">
-            <div>
-              <p className="text-base font-semibold text-gray-900">
-                Filter by class
-              </p>
-              <p className="text-sm text-gray-500">
-                {selectedClasses.length > 0
-                  ? `${selectedClasses.length} selected`
-                  : "All classes"}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setSelectedClasses([])}
-              className="text-sm font-semibold text-blue-600 hover:text-blue-700"
-              disabled={selectedClasses.length === 0}
-            >
-              Clear
-            </button>
-          </div>
-
-          <div className="flex flex-wrap gap-2 px-4 pb-4">
-            {classOptions.map((option) => {
-              const active = selectedClasses.includes(option);
-              return (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => {
-                    setSelectedClasses((prev) => {
-                      if (prev.includes(option)) {
-                        return prev.filter((item) => item !== option);
-                      }
-                      return [...prev, option];
-                    });
-                  }}
-                  className={`inline-flex items-center rounded-full border px-4 py-2 text-sm font-medium transition ${
-                    active
-                      ? "border-blue-500 bg-blue-50 text-blue-700"
-                      : "border-gray-200 bg-gray-50 text-gray-700 hover:border-gray-300"
-                  }`}
-                >
-                  {option}
-                </button>
-              );
-            })}
-          </div>
         </div>
       </div>
 
@@ -331,6 +271,7 @@ function New_Invoices() {
           onToggleBilling={handleAssignBillingCode}
           getAllowedTuitionAmount={getAllowedTuitionAmount}
           extractTuitionAmountFromCode={extractTuitionAmountFromCode}
+          totalStudents={totalStudents}
         />
       </div>
 
@@ -346,6 +287,15 @@ function New_Invoices() {
         onToggleBilling={handleAssignBillingCode}
         getAllowedTuitionAmount={getAllowedTuitionAmount}
         extractTuitionAmountFromCode={extractTuitionAmountFromCode}
+      />
+
+      <CreateInvoiceModule
+        open={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        loading={creatingInvoices}
+        defaultYear={invoiceYear}
+        defaultMonth={invoiceMonth}
+        onSubmit={(payload) => handleCreateInvoices(payload)}
       />
     </div>
   );

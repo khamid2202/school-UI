@@ -4,11 +4,7 @@ import BillingCheckBox from "./BillingCheckBox";
 
 const cn = (...classes) => classes.filter(Boolean).join(" ");
 
-const fullName = (st) =>
-  [st?.first_name, st?.last_name].filter(Boolean).join(" ") ||
-  st?.name ||
-  st?.full_name ||
-  "Unnamed";
+const fullName = (st) => st?.full_name || "Unnamed";
 
 const studentHasBillingCode = (student, code) => {
   if (!code) return false;

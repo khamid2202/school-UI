@@ -13,25 +13,6 @@ function AdminTools() {
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          {/* <Link
-            to="/management/invoices"
-            className="group rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">
-                  Invoices
-                </h2>
-                <p className="text-sm text-gray-600 mt-1">
-                  Configure billing and invoice assignments.
-                </p>
-              </div>
-              <span className="text-blue-600 font-medium opacity-0 transition group-hover:opacity-100">
-                →
-              </span>
-            </div>
-          </Link> */}
-
           <Link
             to="/management/discounts"
             className="group rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
