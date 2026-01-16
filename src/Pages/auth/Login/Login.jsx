@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { login } from "../../../Library/Authenticate";
-import { fetchUserData } from "../../../Library/Authenticate";
+import { useAuth } from "../../../Hooks/AuthContext";
 
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { onLoginSuccess } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -34,28 +35,19 @@ const Login = () => {
     login({
       username: username.trim().toLowerCase(),
       password,
-      onSuccess: () => {
+      onSuccess: async () => {
         console.log("Login successful");
-        // Fetch user data after successful login and only navigate after it's stored
-        fetchUserData({
-          onSuccess: (data) => {
-            console.log("Fetched user data:", data);
-            try {
-              localStorage.setItem("user", JSON.stringify(data));
-            } catch (e) {
-              console.warn("Failed to store user data in localStorage:", e);
-            }
-            setLoading(false);
-            // If user was redirected to login, go back to the original page
-            const fromPath = location.state?.from?.pathname || "/home";
-            navigate(fromPath);
-          },
-          onFail: (message) => {
-            console.log("Failed to fetch user data:", message);
-            setError(message || "Failed to fetch user data. Please try again.");
-            setLoading(false);
-          },
-        });
+        // Fetch user data via AuthContext (stores in context, not localStorage)
+        const success = await onLoginSuccess();
+        if (success) {
+          setLoading(false);
+          // If user was redirected to login, go back to the original page
+          const fromPath = location.state?.from?.pathname || "/home";
+          navigate(fromPath);
+        } else {
+          setError("Failed to fetch user data. Please try again.");
+          setLoading(false);
+        }
       },
 
       onFail: (message) => {
@@ -65,8 +57,6 @@ const Login = () => {
       },
     });
   };
-
-  //after logging in get the user from the backend and store it in local storage
 
   return (
     <div className="md:flex md:flex-row">
@@ -151,7 +141,7 @@ const Login = () => {
                 disabled={loading}
               >
                 {loading ? (
-                  <div className="flex items-center justify-center" >
+                  <div className="flex items-center justify-center">
                     <svg
                       className="animate-spin h-5 w-5 mr-2 text-white"
                       xmlns="http://www.w3.org/2000/svg"

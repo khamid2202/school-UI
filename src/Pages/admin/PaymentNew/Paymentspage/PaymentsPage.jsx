@@ -1,12 +1,70 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import PaymentTable from "../PaymentTable/PaymentTable";
 import MonthsToFilter, { monthsOptions } from "../Filters/MonthsToFilter";
 import PaymentPurpose from "../Filters/PaymentPurpose";
 import { useGlobalContext } from "../../../../Hooks/UseContext";
 
+// Map JS Date month (0-11) to month key
+const monthIndexToKey = {
+  0: "jan",
+  1: "feb",
+  2: "mar",
+  3: "apr",
+  4: "may",
+  5: "jun",
+  // Jul & Aug not in academic year options
+  8: "sep",
+  9: "oct",
+  10: "nov",
+  11: "dec",
+};
+
+// Get default months: previous, current, and next month
+const getDefaultMonths = () => {
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const prevMonth = (currentMonth - 1 + 12) % 12;
+  const nextMonth = (currentMonth + 1) % 12;
+
+  const keys = [prevMonth, currentMonth, nextMonth]
+    .map((m) => monthIndexToKey[m])
+    .filter(Boolean); // Filter out Jul/Aug which aren't in options
+
+  // If we have no valid months (summer), default to sep
+  return keys.length > 0 ? keys : ["sep"];
+};
+
+// Load saved months from localStorage with validation against allowed keys
+const loadSavedMonths = (allowedKeys, fallback) => {
+  try {
+    const raw = localStorage.getItem("payments.selectedMonths");
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return fallback;
+    const valid = parsed.filter((key) => allowedKeys.includes(key));
+    return valid.length ? valid : fallback;
+  } catch (err) {
+    console.warn("Failed to read saved months", err);
+    return fallback;
+  }
+};
+
 function PaymentsPage() {
   const allMonthKeys = useMemo(() => monthsOptions.map((m) => m.key), []);
-  const [selectedMonths, setSelectedMonths] = useState(allMonthKeys);
+  const defaultMonths = useMemo(() => getDefaultMonths(), []);
+  const [selectedMonths, setSelectedMonths] = useState(() =>
+    loadSavedMonths(allMonthKeys, defaultMonths)
+  );
+  const storageKey = "payments.selectedMonths";
+
+  // Persist selection whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(selectedMonths));
+    } catch (err) {
+      console.warn("Failed to persist months selection", err);
+    }
+  }, [selectedMonths]);
   const {
     searchTerm,
     setSearchTerm,

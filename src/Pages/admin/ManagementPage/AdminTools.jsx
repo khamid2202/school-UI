@@ -38,7 +38,7 @@ function AdminTools() {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">
-                  Invoivces 2.0
+                  Invoivces
                 </h2>
                 <p className="text-sm text-gray-600 mt-1">
                   New invoivces management page.

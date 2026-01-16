@@ -8,16 +8,19 @@ import React, {
 import { api } from "../Library/RequestMaker";
 import { endpoints } from "../Library/Endpoints";
 import toast from "react-hot-toast";
+import { useAuth } from "./AuthContext";
 
 const GlobalContext = createContext(null);
 
-export const GlobalProvider = ({ children }) => {
-  // Shared app-wide state lives here; add fields as needed.
-  const [currentUser, setCurrentUser] = useState(null);
-  const [authToken, setAuthToken] = useState(null);
-  const [appReady, setAppReady] = useState(false);
+/**
+ * DataProvider - Handles data fetching for authenticated users only.
+ * This provider should only be rendered inside authenticated routes.
+ */
+export const DataProvider = ({ children }) => {
+  // Get role info from AuthContext (verified by server)
+  const { isAdmin } = useAuth();
 
-  // Payments state (moved from paymentContext)
+  // Payments state
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -196,14 +199,16 @@ export const GlobalProvider = ({ children }) => {
   };
 
   useEffect(() => {
+    if (!isAdmin) return;
     fetchBillings();
     fetchClasses();
-  }, []);
+  }, [isAdmin]);
 
   useEffect(() => {
+    if (!isAdmin) return;
     fetchStudents(1, false);
     fetchDormStudents(1, false);
-  }, [searchTerm]);
+  }, [searchTerm, isAdmin]);
 
   const hasMore = useMemo(() => {
     if (!meta) return false;
@@ -300,18 +305,8 @@ export const GlobalProvider = ({ children }) => {
     ));
   };
 
-  useEffect(() => {
-    fetchBillings();
-  }, []);
-
   const value = useMemo(
     () => ({
-      currentUser,
-      setCurrentUser,
-      authToken,
-      setAuthToken,
-      appReady,
-      setAppReady,
       // payments
       students,
       setStudents,
@@ -325,6 +320,7 @@ export const GlobalProvider = ({ children }) => {
       page,
       setPage,
       meta,
+      metaDorm,
       hasMore,
       hasMoreDorm,
       loadMore,
@@ -345,9 +341,6 @@ export const GlobalProvider = ({ children }) => {
       normalizeInvoices,
     }),
     [
-      currentUser,
-      authToken,
-      appReady,
       students,
       dormStudents,
       loading,
@@ -358,6 +351,7 @@ export const GlobalProvider = ({ children }) => {
       errorDorm,
       page,
       meta,
+      metaDorm,
       hasMore,
       hasMoreDorm,
       selectedPurpose,
@@ -375,6 +369,6 @@ export const GlobalProvider = ({ children }) => {
 export const useGlobalContext = () => {
   const ctx = useContext(GlobalContext);
   if (!ctx)
-    throw new Error("useGlobalContext must be used within a GlobalProvider");
+    throw new Error("useGlobalContext must be used within a DataProvider");
   return ctx;
 };

@@ -38,7 +38,7 @@ function Discounts() {
     student_group_id: "",
     billing_id: "",
     // student_id: "",
-    name: "",
+    name: "Tuition",
     reason: "",
     percent: "",
     start_date: "",
@@ -62,6 +62,14 @@ function Discounts() {
     const map = new Map();
     billings.forEach((b) => {
       if (b?.id) map.set(b.id, b);
+    });
+    return map;
+  }, [billings]);
+
+  const billingByCode = useMemo(() => {
+    const map = new Map();
+    billings.forEach((b) => {
+      if (b?.code) map.set(b.code, b);
     });
     return map;
   }, [billings]);
@@ -92,6 +100,22 @@ function Discounts() {
   useEffect(() => {
     fetchDiscounts();
   }, []);
+
+  // Debounced live search as user types
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (q.length < 2) {
+      setSearchResults([]);
+      setSearchError(null);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      searchStudents(q);
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const searchStudents = async (query) => {
     if (!query || query.trim().length < 2) {
@@ -176,7 +200,7 @@ function Discounts() {
       setForm({
         student_group_id: "",
         billing_id: "",
-        name: "",
+        name: "Tuition",
         reason: "",
         percent: "",
         start_date: "",
@@ -279,12 +303,27 @@ function Discounts() {
                           key={s.student_id || s.id}
                           type="button"
                           onClick={() => {
+                            // Attempt to auto-select billing based on student's billing code
+                            const billingCodeFromStudent =
+                              s.billing_code ||
+                              s.billing?.code ||
+                              (Array.isArray(s.billings)
+                                ? s.billings.find((b) => b?.code)?.code
+                                : undefined);
+
+                            const matchedBilling = billingCodeFromStudent
+                              ? billingByCode.get(billingCodeFromStudent)
+                              : null;
+
                             setSelectedStudent(s);
                             setForm((prev) => ({
                               ...prev,
                               student_id: s.student_id ?? s.id ?? "",
                               student_group_id: s.student_group_id ?? "-",
+                              billing_id: matchedBilling?.id || "",
                             }));
+                            setSearchResults([]);
+                            setSearchError(null);
                           }}
                           className="w-full rounded-lg border border-gray-200 px-3 py-2 text-left hover:border-blue-300 hover:bg-blue-50"
                         >
@@ -369,7 +408,7 @@ function Discounts() {
                           onChange={handleChange}
                           onWheel={(e) => e.currentTarget.blur()}
                           className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 no-spin"
-                          placeholder="15"
+                          placeholder="Discount percent:"
                           min={1}
                           max={100}
                         />
@@ -383,7 +422,7 @@ function Discounts() {
                           value={form.reason}
                           onChange={handleChange}
                           className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="for good performance"
+                          placeholder="Reason:"
                           minLength={3}
                           maxLength={255}
                         />
@@ -396,6 +435,7 @@ function Discounts() {
                           </label>
                           <input
                             type="date"
+                            lang="en-GB"
                             name="start_date"
                             value={form.start_date}
                             onChange={handleChange}
@@ -409,6 +449,7 @@ function Discounts() {
                           </label>
                           <input
                             type="date"
+                            lang="en-GB"
                             name="end_date"
                             value={form.end_date}
                             onChange={handleChange}

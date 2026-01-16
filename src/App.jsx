@@ -4,35 +4,30 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
-import Auth from "./Pages/auth/Auth";
+
 import Login from "./Pages/auth/Login/Login";
 import LandingPage from "./Pages/admin/LandingPage/LandingPage";
 import LayoutWithHeader from "./Layouts/Layout";
 import ProtectedRoute from "./Pages/auth/ProtectedRoute";
-
 import Classes from "./Pages/admin/Groups/Classes";
 import Teachers from "./Pages/admin/Teachers/Teachers.jsx";
-import ClassSubjects from "./Pages/admin/ScoresForAdmin/ClassessSubjects";
 import ClassManagement from "./Pages/admin/Groups/ClassManagement";
-import ClassesToView from "./Pages/admin/ScoresForAdmin/ClassesToView.jsx";
 import Timetable from "./Pages/admin/Timetable/Timetable";
 import Exams from "./Pages/admin/Exams/Exams.jsx";
-import MyClasses from "./Pages/teacher/MyClasses/MyClasses.jsx";
-import MyLessons from "./Pages/teacher/MyClasses/MyLessons.jsx";
 import TeacherLessonsPage from "./Pages/teacher/Lessons/TeacherLessonsPage.jsx";
 import StudentPointsPage from "./Pages/teacher/Lessons/StudentPointsPage.jsx";
 import { Toaster } from "react-hot-toast";
 import Tools from "./Pages/admin/Tools/Tools";
 import PaymentsPage from "./Pages/admin/PaymentNew/Paymentspage/PaymentsPage.jsx";
-import { GlobalProvider } from "./Hooks/UseContext";
+import { DataProvider } from "./Hooks/UseContext";
+import { AuthProvider } from "./Hooks/AuthContext";
 import AdminTools from "./Pages/admin/ManagementPage/AdminTools.jsx";
 import Discounts from "./Pages/admin/ManagementPage/Discounts/Discounts.jsx";
-import Configuration from "./Pages/admin/ManagementPage/Configuration/Invoivces.jsx";
 import New_Invoices from "./Pages/admin/ManagementPage/Invoices2.0/New_Invoices_Page.jsx";
 
 function App() {
   return (
-    <GlobalProvider>
+    <AuthProvider>
       <Router>
         <Toaster
           position="top-center"
@@ -68,27 +63,23 @@ function App() {
           <Route
             element={
               <ProtectedRoute>
-                <LayoutWithHeader />
+                <DataProvider>
+                  <LayoutWithHeader />
+                </DataProvider>
               </ProtectedRoute>
             }
           >
             <Route path="/home" element={<LandingPage />} />
-            {/* <Route path="/payments" element={<Payments />} /> */}
             <Route path="/management" element={<AdminTools />} />
             <Route path="/management/discounts" element={<Discounts />} />
             <Route path="/classes" element={<Classes />} />
             <Route path="/class-management" element={<ClassManagement />} />
             <Route path="/teachers" element={<Teachers />} />
             <Route path="/exams" element={<Exams />} />
-            <Route path="/classes-to-view" element={<ClassesToView />} />
-            <Route
-              path="/classes-to-view/class-subjects"
-              element={<ClassSubjects />}
-            />
+
             <Route path="/timetable" element={<Timetable />} />
-            <Route path="/home/my-classes" element={<MyClasses />} />
-            <Route path="/home/my-classes/my-lessons" element={<MyLessons />} />
             <Route path="/teacher/lessons" element={<TeacherLessonsPage />} />
+
             <Route
               path="/teacher/lessons/:lessonId/students"
               element={<StudentPointsPage />}
@@ -102,7 +93,7 @@ function App() {
           </Route>
         </Routes>
       </Router>
-    </GlobalProvider>
+    </AuthProvider>
   );
 }
 

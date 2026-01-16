@@ -15,6 +15,7 @@ import {
   ClipboardPenLine,
 } from "lucide-react";
 import { sendLogoutRequest } from "../Library/Authenticate.jsx";
+import { useAuth } from "../Hooks/AuthContext.jsx";
 
 function Navbar({ isExpanded, setIsExpanded }) {
   const location = useLocation();
@@ -25,28 +26,11 @@ function Navbar({ isExpanded, setIsExpanded }) {
 
   const isActive = (path) => location.pathname === path;
 
-  // Safely parse the stored user. The app sometimes stores either { user: { ... } }
-  // or the user object directly. Also guard against missing/malformed JSON.
-  let user = {};
-  try {
-    const raw = localStorage.getItem("user");
-    user = raw ? JSON.parse(raw) : {};
-  } catch (e) {
-    console.warn(
-      "Invalid user JSON in localStorage, falling back to empty user",
-      e
-    );
-    user = {};
-  }
-
-  // Support both shapes: { user: { username } } and { username }
-  const username = (user && (user.user?.username || user.username)) || "";
+  // Get user data from AuthContext (verified by server)
+  const { user, username, isAdmin, isTeacher, logout } = useAuth();
   const firstLetter = username ? username.charAt(0).toUpperCase() : "U";
-
-  // Extract roles from user object
-  const roles = (user && (user.user?.roles || user.roles)) || [];
-  const isAdmin = roles.includes("admin");
-  const isTeacher = roles.includes("teacher");
+  const fullName =
+    user?.user?.full_name || user?.full_name || username || "User";
 
   // Filter navItems based on user role
   const getVisibleNavItems = () => {
@@ -55,11 +39,11 @@ function Navbar({ isExpanded, setIsExpanded }) {
       { to: "/classes", icon: <BookOpen size={20} />, label: "Classes" },
 
       { to: "/teachers", icon: <Users size={20} />, label: "Tutors" },
-      {
-        to: "/classes-to-view",
-        icon: <BarChart2 size={20} />,
-        label: "Scores",
-      },
+      // {
+      //   to: "/classes-to-view",
+      //   icon: <BarChart2 size={20} />,
+      //   label: "Scores",
+      // },
       { to: "/timetable", icon: <Calendar size={20} />, label: "Timetable" },
 
       {
@@ -73,11 +57,11 @@ function Navbar({ isExpanded, setIsExpanded }) {
         icon: <CreditCard size={20} />,
         label: "New Payments",
       },
-      {
-        to: "/home/my-classes",
-        icon: <BookOpen size={20} />,
-        label: "Classes",
-      },
+      // {
+      //   to: "/home/my-classes",
+      //   icon: <BookOpen size={20} />,
+      //   label: "Classes",
+      // },
       {
         to: "/teacher/lessons",
         icon: <ClipboardPenLine size={20} />,
@@ -116,15 +100,7 @@ function Navbar({ isExpanded, setIsExpanded }) {
 
   const confirmLogout = () => {
     setShowModal(false);
-    localStorage.clear();
-    sendLogoutRequest({
-      onSuccess: () => {
-        window.location.href = "/login";
-      },
-      onFail: (error) => {
-        console.error("Logout failed:", error);
-      },
-    });
+    logout(); // This now handles everything including redirect
   };
 
   const cancelLogout = () => {
@@ -185,7 +161,7 @@ function Navbar({ isExpanded, setIsExpanded }) {
                   isExpanded && showText ? "opacity-100" : "opacity-0"
                 } ${!isExpanded ? "w-0" : ""}`}
               >
-                {user.user?.full_name || user.full_name || "User"}
+                {fullName}
               </h1>
             </div>
           </div>

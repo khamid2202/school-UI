@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { api } from "../../../Library/RequestMaker.jsx";
 import { endpoints } from "../../../Library/Endpoints.jsx";
+import { useAuth } from "../../../Hooks/AuthContext.jsx";
 
 function MyClasses() {
   const [classes, setClasses] = useState([]);
@@ -18,17 +19,8 @@ function MyClasses() {
 
   const navigate = useNavigate();
 
-  // Get logged-in teacher's name
-  let teacher = {};
-  try {
-    const raw = localStorage.getItem("user");
-    teacher = raw ? JSON.parse(raw) : {};
-  } catch (e) {
-    console.warn("Invalid user JSON in localStorage", e);
-    teacher = {};
-  }
-  const teacherName =
-    (teacher && (teacher.user?.username || teacher.username)) || "";
+  // Get logged-in teacher's name from AuthContext (verified by server)
+  const { username: teacherName } = useAuth();
 
   useEffect(() => {
     const fetchMyClasses = async () => {

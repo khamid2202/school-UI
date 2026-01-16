@@ -4,6 +4,7 @@ import { Trash2 } from "lucide-react";
 import { api } from "../../../Library/RequestMaker.jsx";
 import { endpoints } from "../../../Library/Endpoints.jsx";
 import AddStudentModal from "./AddStudentModal";
+import { useAuth } from "../../../Hooks/AuthContext.jsx";
 
 function ClassManagement() {
   const location = useLocation();
@@ -15,16 +16,8 @@ function ClassManagement() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [warningMessage, setWarningMessage] = useState("");
 
-  // determine if current user has teacher role
-  let localUser = {};
-  try {
-    const raw = localStorage.getItem("user");
-    localUser = raw ? JSON.parse(raw) : {};
-  } catch (e) {
-    localUser = {};
-  }
-  const roles = localUser?.user?.roles || localUser?.roles || [];
-  const isTeacher = Array.isArray(roles) && roles.includes("teacher");
+  // Get role from AuthContext (verified by server)
+  const { isTeacher } = useAuth();
 
   const fetchStudents = useCallback(async () => {
     if (!classInfo) return;
