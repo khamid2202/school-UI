@@ -51,8 +51,8 @@ function PaymentTable({ visibleMonths, filteredStudents }) {
   const activeHasMore = isDorm ? hasMoreDorm : hasMore;
   const activeLoadMore = isDorm ? loadMoreDorm : loadMore;
   const activeTotal = isDorm
-    ? metaDorm?.total ?? activeList.length
-    : meta?.total ?? activeList.length;
+    ? (metaDorm?.total ?? activeList.length)
+    : (meta?.total ?? activeList.length);
   const showDiscounts = selectedPurpose === "tuition";
   const monthsToShow = (
     visibleMonths?.length
@@ -89,7 +89,7 @@ function PaymentTable({ visibleMonths, filteredStudents }) {
         if (activeLoading || activeLoadingMore || !activeHasMore) return;
         activeLoadMore && activeLoadMore();
       },
-      { rootMargin: "200px" }
+      { rootMargin: "200px" },
     );
 
     observer.observe(node);
