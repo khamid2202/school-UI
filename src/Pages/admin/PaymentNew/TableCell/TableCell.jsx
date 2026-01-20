@@ -20,11 +20,8 @@ function TableCell({ value }) {
     if (isObject) {
       const label = value.status || "-";
       const isNotFull = normalizedStatus.includes("not full");
-      if (isNotFull && Number.isFinite(value.remaining)) {
-        return value.remaining;
-      }
-      if (label.toLowerCase() === "partial" && value.percent !== undefined) {
-        return `${value.percent}%`;
+      if (isNotFull && Number.isFinite(value.paid)) {
+        return value.paid;
       }
       return label;
     }

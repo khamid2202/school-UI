@@ -38,10 +38,10 @@ function AdminTools() {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">
-                  Invoivces
+                  Invoices
                 </h2>
                 <p className="text-sm text-gray-600 mt-1">
-                  New invoivces management page.
+                  New invoices management page.
                 </p>
               </div>
               <span className="text-blue-600 font-medium opacity-0 transition group-hover:opacity-100">

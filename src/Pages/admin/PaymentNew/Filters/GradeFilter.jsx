@@ -1,26 +1,34 @@
-import React, { useMemo, useRef, useState, useEffect } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useGlobalContext } from "../../../../Hooks/UseContext";
 
-export const monthsOptions = [
-  { key: "sep", label: "Sep" },
-  { key: "oct", label: "Oct" },
-  { key: "nov", label: "Nov" },
-  { key: "dec", label: "Dec" },
-  { key: "jan", label: "Jan" },
-  { key: "feb", label: "Feb" },
-  { key: "mar", label: "Mar" },
-  { key: "apr", label: "Apr" },
-  { key: "may", label: "May" },
-  { key: "jun", label: "Jun" },
-];
-
-function MonthsToFilter({ selectedMonths = [], onToggle }) {
+function GradeFilter({ selectedGrades = [], onToggle }) {
+  const { classes } = useGlobalContext();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
-  const selectedCount = selectedMonths.length;
-  const allSelected = selectedMonths.length >= monthsOptions.length;
+  const gradeOptions = useMemo(() => {
+    if (!Array.isArray(classes) || classes.length === 0) return [];
 
-  const isSelected = (key) => selectedMonths.includes(key);
+    const gradesSet = new Set();
+    classes.forEach((c) => {
+      const grade = c.grade || c.class_pair?.split("-")[0];
+      if (grade) gradesSet.add(grade);
+    });
+
+    return Array.from(gradesSet)
+      .sort((a, b) => {
+        const numA = parseInt(a, 10);
+        const numB = parseInt(b, 10);
+        if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+        return String(a).localeCompare(String(b));
+      })
+      .map((g) => ({ key: g, label: `Grade ${g}` }));
+  }, [classes]);
+
+  const isSelected = (key) => selectedGrades.includes(key);
+  const allSelected =
+    gradeOptions.length > 0 && selectedGrades.length >= gradeOptions.length;
+  const selectedCount = selectedGrades.length;
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -39,23 +47,25 @@ function MonthsToFilter({ selectedMonths = [], onToggle }) {
 
   const handleSelectAll = () => {
     if (!onToggle) return;
-    monthsOptions.forEach((m) => {
-      if (!isSelected(m.key)) onToggle(m.key);
+    gradeOptions.forEach((g) => {
+      if (!isSelected(g.key)) onToggle(g.key);
     });
   };
 
   const handleClearAll = () => {
     if (!onToggle) return;
-    monthsOptions.forEach((m) => {
-      if (isSelected(m.key)) onToggle(m.key);
+    gradeOptions.forEach((g) => {
+      if (isSelected(g.key)) onToggle(g.key);
     });
   };
 
   const buttonLabel = useMemo(() => {
-    if (selectedCount === 0) return "Months";
-    if (selectedCount === monthsOptions.length) return "All months";
-    return `${selectedCount} months`;
-  }, [selectedCount]);
+    if (selectedCount === 0) return "Grade";
+    if (selectedCount === gradeOptions.length) return "All grades";
+    return `${selectedCount} selected`;
+  }, [selectedCount, gradeOptions.length]);
+
+  if (gradeOptions.length === 0) return null;
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -87,9 +97,9 @@ function MonthsToFilter({ selectedMonths = [], onToggle }) {
       </button>
 
       {isOpen && (
-        <div className="absolute z-20 mt-1 w-64 rounded-md bg-white shadow-lg border border-gray-200 max-h-60 overflow-y-auto">
+        <div className="absolute z-20 mt-1 w-56 rounded-md bg-white shadow-lg border border-gray-200 max-h-60 overflow-y-auto">
           <div className="sticky top-0 bg-white border-b border-gray-100 p-2 flex gap-2">
-            {!allSelected ? (
+            {!allSelected && (
               <button
                 type="button"
                 onClick={handleSelectAll}
@@ -97,8 +107,8 @@ function MonthsToFilter({ selectedMonths = [], onToggle }) {
               >
                 Select All
               </button>
-            ) : null}
-            {selectedCount > 0 ? (
+            )}
+            {selectedCount > 0 && (
               <button
                 type="button"
                 onClick={handleClearAll}
@@ -106,16 +116,16 @@ function MonthsToFilter({ selectedMonths = [], onToggle }) {
               >
                 Clear
               </button>
-            ) : null}
+            )}
           </div>
           <div className="py-1">
-            {monthsOptions.map((m) => {
-              const active = isSelected(m.key);
+            {gradeOptions.map((g) => {
+              const active = isSelected(g.key);
               return (
                 <button
-                  key={m.key}
+                  key={g.key}
                   type="button"
-                  onClick={() => handleToggle(m.key)}
+                  onClick={() => handleToggle(g.key)}
                   className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 ${
                     active ? "bg-blue-50 text-blue-700" : "text-gray-700"
                   }`}
@@ -143,7 +153,7 @@ function MonthsToFilter({ selectedMonths = [], onToggle }) {
                       </svg>
                     )}
                   </span>
-                  {m.label}
+                  {g.label}
                 </button>
               );
             })}
@@ -154,4 +164,4 @@ function MonthsToFilter({ selectedMonths = [], onToggle }) {
   );
 }
 
-export default MonthsToFilter;
+export default GradeFilter;

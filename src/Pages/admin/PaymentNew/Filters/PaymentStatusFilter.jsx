@@ -1,26 +1,18 @@
-import React, { useMemo, useRef, useState, useEffect } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
-export const monthsOptions = [
-  { key: "sep", label: "Sep" },
-  { key: "oct", label: "Oct" },
-  { key: "nov", label: "Nov" },
-  { key: "dec", label: "Dec" },
-  { key: "jan", label: "Jan" },
-  { key: "feb", label: "Feb" },
-  { key: "mar", label: "Mar" },
-  { key: "apr", label: "Apr" },
-  { key: "may", label: "May" },
-  { key: "jun", label: "Jun" },
+export const paymentStatusOptions = [
+  { key: "paid", label: "Paid" },
+  { key: "not_full", label: "Not Full" },
+  { key: "not_paid", label: "Not Paid" },
 ];
 
-function MonthsToFilter({ selectedMonths = [], onToggle }) {
+function PaymentStatusFilter({ selectedStatuses = [], onToggle }) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
-  const selectedCount = selectedMonths.length;
-  const allSelected = selectedMonths.length >= monthsOptions.length;
-
-  const isSelected = (key) => selectedMonths.includes(key);
+  const isSelected = (key) => selectedStatuses.includes(key);
+  const allSelected = selectedStatuses.length >= paymentStatusOptions.length;
+  const selectedCount = selectedStatuses.length;
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -39,22 +31,22 @@ function MonthsToFilter({ selectedMonths = [], onToggle }) {
 
   const handleSelectAll = () => {
     if (!onToggle) return;
-    monthsOptions.forEach((m) => {
-      if (!isSelected(m.key)) onToggle(m.key);
+    paymentStatusOptions.forEach((s) => {
+      if (!isSelected(s.key)) onToggle(s.key);
     });
   };
 
   const handleClearAll = () => {
     if (!onToggle) return;
-    monthsOptions.forEach((m) => {
-      if (isSelected(m.key)) onToggle(m.key);
+    paymentStatusOptions.forEach((s) => {
+      if (isSelected(s.key)) onToggle(s.key);
     });
   };
 
   const buttonLabel = useMemo(() => {
-    if (selectedCount === 0) return "Months";
-    if (selectedCount === monthsOptions.length) return "All months";
-    return `${selectedCount} months`;
+    if (selectedCount === 0) return "Status";
+    if (selectedCount === paymentStatusOptions.length) return "All statuses";
+    return `${selectedCount} selected`;
   }, [selectedCount]);
 
   return (
@@ -87,9 +79,9 @@ function MonthsToFilter({ selectedMonths = [], onToggle }) {
       </button>
 
       {isOpen && (
-        <div className="absolute z-20 mt-1 w-64 rounded-md bg-white shadow-lg border border-gray-200 max-h-60 overflow-y-auto">
+        <div className="absolute z-20 mt-1 w-56 rounded-md bg-white shadow-lg border border-gray-200 max-h-60 overflow-y-auto">
           <div className="sticky top-0 bg-white border-b border-gray-100 p-2 flex gap-2">
-            {!allSelected ? (
+            {!allSelected && (
               <button
                 type="button"
                 onClick={handleSelectAll}
@@ -97,8 +89,8 @@ function MonthsToFilter({ selectedMonths = [], onToggle }) {
               >
                 Select All
               </button>
-            ) : null}
-            {selectedCount > 0 ? (
+            )}
+            {selectedCount > 0 && (
               <button
                 type="button"
                 onClick={handleClearAll}
@@ -106,16 +98,16 @@ function MonthsToFilter({ selectedMonths = [], onToggle }) {
               >
                 Clear
               </button>
-            ) : null}
+            )}
           </div>
           <div className="py-1">
-            {monthsOptions.map((m) => {
-              const active = isSelected(m.key);
+            {paymentStatusOptions.map((s) => {
+              const active = isSelected(s.key);
               return (
                 <button
-                  key={m.key}
+                  key={s.key}
                   type="button"
-                  onClick={() => handleToggle(m.key)}
+                  onClick={() => handleToggle(s.key)}
                   className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 ${
                     active ? "bg-blue-50 text-blue-700" : "text-gray-700"
                   }`}
@@ -143,7 +135,7 @@ function MonthsToFilter({ selectedMonths = [], onToggle }) {
                       </svg>
                     )}
                   </span>
-                  {m.label}
+                  {s.label}
                 </button>
               );
             })}
@@ -154,4 +146,4 @@ function MonthsToFilter({ selectedMonths = [], onToggle }) {
   );
 }
 
-export default MonthsToFilter;
+export default PaymentStatusFilter;

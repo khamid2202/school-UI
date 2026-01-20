@@ -17,7 +17,7 @@ const months = [
   { key: "jun", label: "Jun" },
 ];
 
-function PaymentTable({ visibleMonths }) {
+function PaymentTable({ visibleMonths, filteredStudents }) {
   const {
     students,
     dormStudents,
@@ -43,7 +43,8 @@ function PaymentTable({ visibleMonths }) {
   const [selectedStudent, setSelectedStudent] = useState(null);
 
   const isDorm = selectedPurpose === "dorm";
-  const activeList = isDorm ? dormStudents : students;
+  // Use filtered list if provided, otherwise fallback to full list
+  const activeList = filteredStudents ?? (isDorm ? dormStudents : students);
   const activeError = isDorm ? errorDorm : error;
   const activeLoading = isDorm ? loadingDorm : loading;
   const activeLoadingMore = isDorm ? loadingMoreDorm : loadingMore;
@@ -96,7 +97,7 @@ function PaymentTable({ visibleMonths }) {
   }, [activeHasMore, activeLoadMore, activeLoading, activeLoadingMore]);
 
   return (
-    <div className="mt-4 overflow-x-auto rounded-lg  bg-white shadow-sm">
+    <div className="overflow-x-auto bg-white shadow-sm">
       {activeLoading && activeList.length === 0 ? (
         <div className="p-4 text-sm text-gray-600">Loading students…</div>
       ) : activeError ? (

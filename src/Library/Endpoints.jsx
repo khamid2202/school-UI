@@ -54,5 +54,7 @@ export const endpoints = {
 
   GET_ALL_STUDENTS_FOR_INVOICES: `/students?academic_year_id=1&include_group=1&include_billings=1&include_invoices=1`,
 
-  GET_STUDENTS_TO_TEST: `/students?academic_year_id=1&include_group=1&include_billings=1&include_invoices=1&include_wallet=1&include_payments=1&include_discounts=1`,
+  GET_STUDENTS_FOR_PAYMENTS: `/students?academic_year_id=1&include_group=1&include_billings=1&include_invoices=1&include_wallet=1&include_payments=1&include_discounts=1`,
+
+  GET_TEACHERS_WHO_CAN_TEACH: `/users?filter={"roles":["teacher"],"has_group":true}`,
 };

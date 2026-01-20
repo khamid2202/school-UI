@@ -36,6 +36,7 @@ export const DataProvider = ({ children }) => {
   const [selectedPurpose, setSelectedPurpose] = useState("tuition");
   const [billings, setBillings] = useState([]);
   const [classes, setClasses] = useState([]);
+  const [teachers, setTeachers] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
 
   // Deduplicate students by student_id.
@@ -55,7 +56,25 @@ export const DataProvider = ({ children }) => {
   const normalizeDiscounts = (discounts) => {
     if (!Array.isArray(discounts) || discounts.length === 0) return "-";
 
-    const percentValues = discounts
+    const parseDate = (value) => {
+      const ts = value ? Date.parse(value) : NaN;
+      return Number.isNaN(ts) ? null : ts;
+    };
+
+    const nowTs = Date.now();
+
+    const active = discounts.filter((d) => {
+      const startTs = parseDate(d?.start_date);
+      const endTs = parseDate(d?.end_date);
+
+      if (startTs && nowTs < startTs) return false;
+      if (endTs && nowTs > endTs) return false;
+      return true;
+    });
+
+    if (active.length === 0) return "-";
+
+    const percentValues = active
       .map((d) => (Number.isFinite(d?.percent) ? Number(d.percent) : null))
       .filter((v) => v !== null);
 
@@ -65,7 +84,7 @@ export const DataProvider = ({ children }) => {
     } else if (percentValues.length === 1) {
       return `${percentValues[0]}%`;
     } else {
-      const names = discounts
+      const names = active
         .map((d) => d?.name || null)
         .filter(Boolean)
         .join(", ");
@@ -156,7 +175,7 @@ export const DataProvider = ({ children }) => {
     }
     setError(null);
     try {
-      const res = await api.get(endpoints.GET_STUDENTS_TO_TEST, {
+      const res = await api.get(endpoints.GET_STUDENTS_FOR_PAYMENTS, {
         page: nextPage,
         q: searchTerm || undefined,
       });
@@ -202,6 +221,7 @@ export const DataProvider = ({ children }) => {
     if (!isAdmin) return;
     fetchBillings();
     fetchClasses();
+    fetchTeachers();
   }, [isAdmin]);
 
   useEffect(() => {
@@ -257,6 +277,18 @@ export const DataProvider = ({ children }) => {
     } catch (error) {
       console.error("Error fetching classes:", error);
       setClasses([]);
+    }
+  };
+
+  //TEACHERS
+  const fetchTeachers = async () => {
+    try {
+      const response = await api.get(endpoints.GET_TEACHERS_WHO_CAN_TEACH);
+      const teachersList = response.data.users || response.data.teachers || [];
+      setTeachers(teachersList);
+    } catch (error) {
+      console.error("Error fetching teachers:", error);
+      setTeachers([]);
     }
   };
 
@@ -334,9 +366,11 @@ export const DataProvider = ({ children }) => {
       notifyInvoiceCreated,
       setClasses,
       classes,
+      teachers,
       searchTerm,
       setSearchTerm,
       fetchClasses,
+      fetchTeachers,
       normalizeDiscounts,
       normalizeInvoices,
     }),
@@ -357,6 +391,7 @@ export const DataProvider = ({ children }) => {
       selectedPurpose,
       billings,
       classes,
+      teachers,
       searchTerm,
     ]
   );

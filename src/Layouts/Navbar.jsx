@@ -55,7 +55,7 @@ function Navbar({ isExpanded, setIsExpanded }) {
       {
         to: "/new-payments",
         icon: <CreditCard size={20} />,
-        label: "New Payments",
+        label: "Payments",
       },
       // {
       //   to: "/home/my-classes",
@@ -81,13 +81,13 @@ function Navbar({ isExpanded, setIsExpanded }) {
           item.to === "/home" ||
           item.to === "/exams" ||
           item.to === "/home/my-classes" ||
-          item.to === "/teacher/lessons"
+          item.to === "/teacher/lessons",
       );
     }
 
     // Fallback: show only Home and Exams
     return allItems.filter(
-      (item) => item.to === "/home" || item.to === "/exams"
+      (item) => item.to === "/home" || item.to === "/exams",
     );
   };
 
