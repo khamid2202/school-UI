@@ -96,7 +96,8 @@ function TableRow({ student, onAddPayment, showDiscounts = true, months }) {
         {monthsToRender.map((m) => {
           const monthHasInvoice = Boolean(invoiceStatus[m.key]);
           const cellValue =
-            invoiceStatus[m.key] || (isCourse || isDorm ? { status: "N/A" } : undefined);
+            invoiceStatus[m.key] ||
+            (isCourse || isDorm ? { status: "N/A" } : undefined);
 
           return (
             <TableCell
