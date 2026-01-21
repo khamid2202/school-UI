@@ -72,7 +72,7 @@ function TeacherFilter({ selectedTeachers = [], onToggle }) {
               : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
           }`}
         >
-          {selectedCount > 0 ? `${selectedCount} selected` : "Select teachers"}
+          {selectedCount > 0 ? `${selectedCount} selected` : "Teachers"}
           <svg
             className={`w-4 h-4 transition-transform ${
               isOpen ? "rotate-180" : ""

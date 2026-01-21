@@ -6,6 +6,9 @@ import { endpoints } from "../../../../Library/Endpoints";
 import InvoiceTable from "./InvoiceTable";
 import MobileCards from "./MobileCards";
 import CreateInvoiceModule from "./CreateInvoiceModule";
+import ClassFilter from "./Filters/ClassFilter";
+import TeacherFilter from "./Filters/TeacherFilter";
+import InvoiceCodeFilter from "./Filters/InvoiceCodeFilter";
 
 const SPECIAL_TUITION_CLASSES = new Set(["4-A", "4-B"]);
 
@@ -56,11 +59,17 @@ function New_Invoices() {
     notifyInvoiceCreated,
     searchTerm,
     setSearchTerm,
+    classes = [],
+    teachers = [],
   } = useGlobalContext();
 
   const [pendingAssignments, setPendingAssignments] = useState({});
   const [creatingInvoices, setCreatingInvoices] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedClasses, setSelectedClasses] = useState([]);
+  const [selectedTeachers, setSelectedTeachers] = useState([]);
+  const [selectedInvoiceCodes, setSelectedInvoiceCodes] = useState([]);
 
   const now = useMemo(() => new Date(), []);
   const currentYear = now.getFullYear();
@@ -69,6 +78,44 @@ function New_Invoices() {
   const [invoiceMonth, setInvoiceMonth] = useState(currentMonth);
 
   const totalStudents = meta?.total ?? 0;
+
+  const classOptions = useMemo(() => {
+    if (!Array.isArray(classes)) return [];
+    const seen = new Set();
+    return classes
+      .map((cls) => cls?.class_pair || cls?.name || null)
+      .filter(Boolean)
+      .filter((value) => {
+        if (seen.has(value)) return false;
+        seen.add(value);
+        return true;
+      })
+      .sort((a, b) => a.localeCompare(b));
+  }, [classes]);
+
+  const teacherOptions = useMemo(() => {
+    if (!Array.isArray(teachers)) return [];
+    const seen = new Set();
+    return teachers
+      .map((t) => t.full_name || t.name || null)
+      .filter(Boolean)
+      .map((label) => ({ key: label.trim().toLowerCase(), label }))
+      .filter(({ key }) => {
+        if (!key) return false;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [teachers]);
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (selectedClasses.length > 0) count++;
+    if (selectedTeachers.length > 0) count++;
+    if (selectedInvoiceCodes.length > 0) count++;
+    return count;
+  }, [selectedClasses, selectedTeachers, selectedInvoiceCodes]);
 
   const billingCodes = useMemo(() => {
     const seen = new Set();
@@ -93,21 +140,65 @@ function New_Invoices() {
   const filteredStudents = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
 
+    const studentInvoiceCodes = (st) => {
+      const invoices = Array.isArray(st?.invoices) ? st.invoices : [];
+      const invoiceCodes = invoices
+        .map((inv) => inv?.billing_code || inv?.code || inv?.billing?.code)
+        .filter(Boolean);
+
+      const assignedCodes = Array.isArray(st?.billings)
+        ? st.billings.map((b) => b?.code).filter(Boolean)
+        : [];
+
+      return Array.from(new Set([...invoiceCodes, ...assignedCodes]));
+    };
+
     return students.filter((st) => {
-      if (!q) return true;
       const name = fullName(st).toLowerCase();
       const idStr = String(st.student_id ?? st.id ?? "").toLowerCase();
       const classPair =
         st?.group?.class_pair ||
         [st?.group?.grade, st?.group?.class].filter(Boolean).join("-");
+      const teacherName = (st?.group?.teacher_name || "").trim().toLowerCase();
+      const invoiceCodesForStudent = studentInvoiceCodes(st);
 
-      return (
-        name.includes(q) ||
-        idStr.includes(q) ||
-        classPair.toLowerCase().includes(q)
-      );
+      if (q) {
+        const matchesSearch =
+          name.includes(q) ||
+          idStr.includes(q) ||
+          classPair.toLowerCase().includes(q);
+        if (!matchesSearch) return false;
+      }
+
+      if (selectedClasses.length > 0 && !selectedClasses.includes(classPair)) {
+        return false;
+      }
+
+      if (
+        selectedTeachers.length > 0 &&
+        (!teacherName || !selectedTeachers.includes(teacherName))
+      ) {
+        return false;
+      }
+
+      if (
+        selectedInvoiceCodes.length > 0 &&
+        !invoiceCodesForStudent.some((code) =>
+          selectedInvoiceCodes.includes(code),
+        )
+      ) {
+        return false;
+      }
+
+      return true;
     });
-  }, [students, searchTerm]);
+  }, [
+    students,
+    searchTerm,
+    selectedClasses,
+    selectedTeachers,
+    selectedInvoiceCodes,
+  ]);
 
   const handleCreateInvoices = async ({ year, month }) => {
     if (!year || !month) {
@@ -125,7 +216,7 @@ function New_Invoices() {
       });
 
       notifyInvoiceCreated?.(
-        "Invoices created successfully for the selected month."
+        "Invoices created successfully for the selected month.",
       );
       setShowCreateModal(false);
     } catch (err) {
@@ -166,7 +257,7 @@ function New_Invoices() {
       }
 
       const nonTuitionCodes = existingCodes.filter(
-        (c) => extractTuitionAmountFromCode(c) === null
+        (c) => extractTuitionAmountFromCode(c) === null,
       );
       const nextSet = new Set(nonTuitionCodes);
       if (nextChecked) {
@@ -209,11 +300,11 @@ function New_Invoices() {
               id: billingByCode.get(c)?.id,
             })),
           };
-        })
+        }),
       );
     } catch (err) {
       toast.error(
-        err?.response?.data?.message || "Failed to update billing codes."
+        err?.response?.data?.message || "Failed to update billing codes.",
       );
     } finally {
       setPendingAssignments((prev) => {
@@ -226,14 +317,48 @@ function New_Invoices() {
 
   return (
     <div className="p-4 sm:p-6 space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">
-            Invoice assignments
-          </h1>
-          <p className="text-sm text-gray-500">
-            Toggle billing codes to assign invoices for each student.
-          </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <button
+              type="button"
+              onClick={() => setShowFilters((prev) => !prev)}
+              className={`relative inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold transition sm:w-auto ${
+                showFilters || activeFilterCount > 0
+                  ? "border-blue-500 bg-blue-50 text-blue-700"
+                  : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              Filters
+              <span
+                aria-hidden={!activeFilterCount ? "true" : undefined}
+                className={`pointer-events-none absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-[11px] font-bold leading-none text-white transition-opacity ${
+                  activeFilterCount > 0 ? "opacity-100" : "opacity-0"
+                }`}
+              >
+                {activeFilterCount || 0}
+              </span>
+            </button>
+            {showFilters && (
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <InvoiceCodeFilter
+                  options={billingCodes}
+                  selected={selectedInvoiceCodes}
+                  onChange={setSelectedInvoiceCodes}
+                />
+                <ClassFilter
+                  options={classOptions}
+                  selected={selectedClasses}
+                  onChange={setSelectedClasses}
+                />
+                <TeacherFilter
+                  options={teacherOptions}
+                  selected={selectedTeachers}
+                  onChange={setSelectedTeachers}
+                />
+              </div>
+            )}
+          </div>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           <div className="w-full sm:w-80">

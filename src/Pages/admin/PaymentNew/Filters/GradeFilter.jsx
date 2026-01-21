@@ -6,28 +6,35 @@ function GradeFilter({ selectedGrades = [], onToggle }) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
-  const gradeOptions = useMemo(() => {
+  const classOptions = useMemo(() => {
     if (!Array.isArray(classes) || classes.length === 0) return [];
 
-    const gradesSet = new Set();
-    classes.forEach((c) => {
-      const grade = c.grade || c.class_pair?.split("-")[0];
-      if (grade) gradesSet.add(grade);
-    });
-
-    return Array.from(gradesSet)
-      .sort((a, b) => {
-        const numA = parseInt(a, 10);
-        const numB = parseInt(b, 10);
-        if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
-        return String(a).localeCompare(String(b));
+    return classes
+      .map((c) => {
+        const classKey = c.class_pair || c.grade;
+        if (!classKey) return null;
+        return { key: classKey, label: classKey };
       })
-      .map((g) => ({ key: g, label: `Grade ${g}` }));
+      .filter(Boolean)
+      .sort((a, b) => {
+        // Sort by grade number first, then by letter
+        const parseClass = (str) => {
+          const match = str.match(/^(\d+)[-]?(.*)$/);
+          if (match) {
+            return { num: parseInt(match[1], 10), suffix: match[2] || "" };
+          }
+          return { num: 0, suffix: str };
+        };
+        const aParsed = parseClass(a.key);
+        const bParsed = parseClass(b.key);
+        if (aParsed.num !== bParsed.num) return aParsed.num - bParsed.num;
+        return aParsed.suffix.localeCompare(bParsed.suffix);
+      });
   }, [classes]);
 
   const isSelected = (key) => selectedGrades.includes(key);
   const allSelected =
-    gradeOptions.length > 0 && selectedGrades.length >= gradeOptions.length;
+    classOptions.length > 0 && selectedGrades.length >= classOptions.length;
   const selectedCount = selectedGrades.length;
 
   useEffect(() => {
@@ -47,25 +54,25 @@ function GradeFilter({ selectedGrades = [], onToggle }) {
 
   const handleSelectAll = () => {
     if (!onToggle) return;
-    gradeOptions.forEach((g) => {
+    classOptions.forEach((g) => {
       if (!isSelected(g.key)) onToggle(g.key);
     });
   };
 
   const handleClearAll = () => {
     if (!onToggle) return;
-    gradeOptions.forEach((g) => {
+    classOptions.forEach((g) => {
       if (isSelected(g.key)) onToggle(g.key);
     });
   };
 
   const buttonLabel = useMemo(() => {
-    if (selectedCount === 0) return "Grade";
-    if (selectedCount === gradeOptions.length) return "All grades";
+    if (selectedCount === 0) return "Class";
+    if (selectedCount === classOptions.length) return "All classes";
     return `${selectedCount} selected`;
-  }, [selectedCount, gradeOptions.length]);
+  }, [selectedCount, classOptions.length]);
 
-  if (gradeOptions.length === 0) return null;
+  if (classOptions.length === 0) return null;
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -119,7 +126,7 @@ function GradeFilter({ selectedGrades = [], onToggle }) {
             )}
           </div>
           <div className="py-1">
-            {gradeOptions.map((g) => {
+            {classOptions.map((g) => {
               const active = isSelected(g.key);
               return (
                 <button

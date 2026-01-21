@@ -20,22 +20,30 @@ const months = [
 function PaymentTable({ visibleMonths, filteredStudents }) {
   const {
     students,
-    dormStudents,
     loading,
     loadingMore,
+    dormStudents,
     loadingDorm,
     loadingMoreDorm,
+    courseStudents,
+    loadingCourse,
+    loadingMoreCourse,
     error,
     errorDorm,
+    errorCourse,
     selectedPurpose,
     loadMore,
     loadMoreDorm,
+    loadMoreCourse,
     hasMore,
     hasMoreDorm,
+    hasMoreCourse,
     refetch,
     refetchDorm,
+    refetchCourse,
     meta,
     metaDorm,
+    metaCourse,
   } = useGlobalContext();
 
   const sentinelRef = useRef(null);
@@ -43,16 +51,43 @@ function PaymentTable({ visibleMonths, filteredStudents }) {
   const [selectedStudent, setSelectedStudent] = useState(null);
 
   const isDorm = selectedPurpose === "dorm";
-  // Use filtered list if provided, otherwise fallback to full list
-  const activeList = filteredStudents ?? (isDorm ? dormStudents : students);
-  const activeError = isDorm ? errorDorm : error;
-  const activeLoading = isDorm ? loadingDorm : loading;
-  const activeLoadingMore = isDorm ? loadingMoreDorm : loadingMore;
-  const activeHasMore = isDorm ? hasMoreDorm : hasMore;
-  const activeLoadMore = isDorm ? loadMoreDorm : loadMore;
+  const isCourse = selectedPurpose === "course";
+
+  // Use filtered list if provided, otherwise fallback to purpose-specific list
+  const activeList = filteredStudents
+    ? filteredStudents
+    : isDorm
+      ? dormStudents
+      : isCourse
+        ? courseStudents
+        : students;
+
+  const activeError = isDorm ? errorDorm : isCourse ? errorCourse : error;
+  const activeLoading = isDorm
+    ? loadingDorm
+    : isCourse
+      ? loadingCourse
+      : loading;
+  const activeLoadingMore = isDorm
+    ? loadingMoreDorm
+    : isCourse
+      ? loadingMoreCourse
+      : loadingMore;
+  const activeHasMore = isDorm
+    ? hasMoreDorm
+    : isCourse
+      ? hasMoreCourse
+      : hasMore;
+  const activeLoadMore = isDorm
+    ? loadMoreDorm
+    : isCourse
+      ? loadMoreCourse
+      : loadMore;
   const activeTotal = isDorm
     ? (metaDorm?.total ?? activeList.length)
-    : (meta?.total ?? activeList.length);
+    : isCourse
+      ? (metaCourse?.total ?? activeList.length)
+      : (meta?.total ?? activeList.length);
   const showDiscounts = selectedPurpose === "tuition";
   const monthsToShow = (
     visibleMonths?.length
@@ -68,6 +103,8 @@ function PaymentTable({ visibleMonths, filteredStudents }) {
   const handlePaymentSuccess = async () => {
     if (isDorm) {
       await refetchDorm?.();
+    } else if (isCourse) {
+      await refetchCourse?.();
     } else {
       await refetch?.();
     }
@@ -96,8 +133,10 @@ function PaymentTable({ visibleMonths, filteredStudents }) {
     return () => observer.disconnect();
   }, [activeHasMore, activeLoadMore, activeLoading, activeLoadingMore]);
 
+  const colCount = 6 + monthsToShow.length + (showDiscounts ? 1 : 0);
+
   return (
-    <div className="overflow-x-auto bg-white shadow-sm">
+    <div className="relative overflow-x-auto bg-white shadow-sm">
       {activeLoading && activeList.length === 0 ? (
         <div className="p-4 text-sm text-gray-600">Loading students…</div>
       ) : activeError ? (
@@ -124,7 +163,7 @@ function PaymentTable({ visibleMonths, filteredStudents }) {
                 </th>
               ) : null}
               {monthsToShow.map((month) => (
-                <th key={month.key} className="px-3 py-3 border text-right">
+                <th key={month.key} className="px-3 py-3 border text-center">
                   {month.label}
                 </th>
               ))}
@@ -151,11 +190,29 @@ function PaymentTable({ visibleMonths, filteredStudents }) {
         ref={sentinelRef}
         className="h-10 flex items-center justify-center text-sm text-gray-600"
       >
-        {activeLoadingMore ? "Loading more students…" : null}
         {!activeHasMore && !activeLoadingMore && activeList.length > 0
           ? "End of list"
           : null}
       </div>
+
+      {activeLoadingMore ? (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 ">
+          <div
+            className="grid gap-3 bg-white/80 backdrop-blur-sm rounded-xl border border-slate-100 shadow-sm p-3"
+            style={{
+              gridTemplateColumns: `repeat(${colCount}, minmax(80px,1fr))`,
+            }}
+            aria-label="Loading more students"
+          >
+            {Array.from({ length: colCount }).map((_, idx) => (
+              <div
+                key={idx}
+                className="h-3 rounded bg-slate-200 animate-pulse"
+              />
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       {showPaymentModal && selectedStudent ? (
         <PaymentModule

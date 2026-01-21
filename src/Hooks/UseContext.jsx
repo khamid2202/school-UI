@@ -27,12 +27,21 @@ export const DataProvider = ({ children }) => {
   const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
   const [meta, setMeta] = useState(null);
+
   const [dormStudents, setDormStudents] = useState([]);
   const [loadingDorm, setLoadingDorm] = useState(false);
   const [loadingMoreDorm, setLoadingMoreDorm] = useState(false);
   const [errorDorm, setErrorDorm] = useState(null);
   const [metaDorm, setMetaDorm] = useState(null);
   const [pageDorm, setPageDorm] = useState(1);
+
+  const [courseStudents, setCourseStudents] = useState([]);
+  const [loadingCourse, setLoadingCourse] = useState(false);
+  const [loadingMoreCourse, setLoadingMoreCourse] = useState(false);
+  const [errorCourse, setErrorCourse] = useState(null);
+  const [metaCourse, setMetaCourse] = useState(null);
+  const [pageCourse, setPageCourse] = useState(1);
+
   const [selectedPurpose, setSelectedPurpose] = useState("tuition");
   const [billings, setBillings] = useState([]);
   const [classes, setClasses] = useState([]);
@@ -217,6 +226,32 @@ export const DataProvider = ({ children }) => {
     }
   };
 
+  //COURSE STUDENTS
+  const fetchCourseStudents = async (nextPage = 1, append = false) => {
+    if (append) {
+      setLoadingMoreCourse(true);
+    } else {
+      setLoadingCourse(true);
+    }
+    setErrorCourse(null);
+    try {
+      const res = await api.get(endpoints.GET_COURSE_STUDENTS_FOR_PAYMENTS, {
+        page: nextPage,
+        q: searchTerm || undefined,
+      });
+      const raw = res?.data?.students || [];
+      const unique = deduplicateRaw(raw);
+      setCourseStudents((prev) => (append ? [...prev, ...unique] : unique));
+      setMetaCourse(res?.data?.meta || null);
+      setPageCourse(nextPage);
+    } catch (err) {
+      setErrorCourse(err?.message || "Failed to load course students");
+    } finally {
+      setLoadingCourse(false);
+      setLoadingMoreCourse(false);
+    }
+  };
+
   useEffect(() => {
     if (!isAdmin) return;
     fetchBillings();
@@ -228,6 +263,7 @@ export const DataProvider = ({ children }) => {
     if (!isAdmin) return;
     fetchStudents(1, false);
     fetchDormStudents(1, false);
+    fetchCourseStudents(1, false);
   }, [searchTerm, isAdmin]);
 
   const hasMore = useMemo(() => {
@@ -244,6 +280,13 @@ export const DataProvider = ({ children }) => {
     return to < total;
   }, [metaDorm, dormStudents.length]);
 
+  const hasMoreCourse = useMemo(() => {
+    if (!metaCourse) return false;
+    const total = metaCourse.total ?? 0;
+    const to = metaCourse.range?.to ?? courseStudents.length;
+    return to < total;
+  }, [metaCourse, courseStudents.length]);
+
   const loadMore = async () => {
     if (loading || loadingMore || !hasMore) return;
     await fetchStudents(page + 1, true);
@@ -252,6 +295,11 @@ export const DataProvider = ({ children }) => {
   const loadMoreDorm = async () => {
     if (loadingDorm || loadingMoreDorm || !hasMoreDorm) return;
     await fetchDormStudents(pageDorm + 1, true);
+  };
+
+  const loadMoreCourse = async () => {
+    if (loadingCourse || loadingMoreCourse || !hasMoreCourse) return;
+    await fetchCourseStudents(pageCourse + 1, true);
   };
 
   //BILLINGS
@@ -308,7 +356,7 @@ export const DataProvider = ({ children }) => {
   };
 
   const notifyInvoiceCreated = (
-    message = "Invoice created successfully for all students."
+    message = "Invoice created successfully for all students.",
   ) => {
     toast.custom((t) => (
       <div
@@ -343,22 +391,32 @@ export const DataProvider = ({ children }) => {
       students,
       setStudents,
       dormStudents,
+      setDormStudents,
+      courseStudents,
+      setCourseStudents,
       loading,
       loadingMore,
       loadingDorm,
       loadingMoreDorm,
+      loadingCourse,
+      loadingMoreCourse,
       error,
       errorDorm,
+      errorCourse,
       page,
       setPage,
       meta,
       metaDorm,
+      metaCourse,
       hasMore,
       hasMoreDorm,
+      hasMoreCourse,
       loadMore,
       loadMoreDorm,
+      loadMoreCourse,
       refetch: fetchStudents,
       refetchDorm: fetchDormStudents,
+      refetchCourse: fetchCourseStudents,
       selectedPurpose,
       setSelectedPurpose,
       billings,
@@ -376,24 +434,31 @@ export const DataProvider = ({ children }) => {
     }),
     [
       students,
-      dormStudents,
       loading,
       loadingMore,
+      dormStudents,
       loadingDorm,
       loadingMoreDorm,
+      courseStudents,
+      loadingCourse,
+      loadingMoreCourse,
       error,
       errorDorm,
+      errorCourse,
       page,
+      pageCourse,
       meta,
       metaDorm,
+      metaCourse,
       hasMore,
       hasMoreDorm,
+      hasMoreCourse,
       selectedPurpose,
       billings,
       classes,
       teachers,
       searchTerm,
-    ]
+    ],
   );
 
   return (

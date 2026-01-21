@@ -1,6 +1,6 @@
 import React from "react";
 
-function TableCell({ value }) {
+function TableCell({ value, onClick }) {
   const isObject = value && typeof value === "object";
 
   const normalizedStatus = isObject
@@ -32,7 +32,8 @@ function TableCell({ value }) {
     <td className="px-2 py-2 text-center border">
       {isObject ? (
         <button
-          className={`inline-flex min-w-[96px] items-center justify-center whitespace-nowrap rounded-full px-3 py-1 text-sm font-semibold ${badgeClasses}`}
+          onClick={onClick}
+          className={`inline-flex min-w-[96px] items-center justify-center whitespace-nowrap rounded-full px-3 py-1 text-sm font-semibold transition hover:brightness-[0.97] ${badgeClasses}`}
         >
           {display}
         </button>

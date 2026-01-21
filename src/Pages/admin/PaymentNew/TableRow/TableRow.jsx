@@ -1,18 +1,59 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import TableCell from "../TableCell/TableCell";
 import { monthsOptions } from "../Filters/MonthsToFilter";
 import { useGlobalContext } from "../../../../Hooks/UseContext";
 import DiscountModule from "../TableModules/DiscountModule";
 import TotalPaidModule from "../TableModules/TotalPaidModule";
+import InvoiceModule from "../TableModules/InvoiceModule";
 
 function TableRow({ student, onAddPayment, showDiscounts = true, months }) {
-  const { normalizeDiscounts, normalizeInvoices } = useGlobalContext();
+  const { normalizeDiscounts, normalizeInvoices, selectedPurpose } =
+    useGlobalContext();
   const [showDiscountModal, setShowDiscountModal] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [activeMonthKey, setActiveMonthKey] = useState(null);
 
   const discountsDisplay = normalizeDiscounts(student.discounts);
 
-  const invoiceStatus = normalizeInvoices(student.invoices);
+  const billingCodeById = useMemo(() => {
+    const map = new Map();
+    if (Array.isArray(student?.billings)) {
+      student.billings.forEach((b) => {
+        if (b?.id && b?.code) map.set(b.id, b.code);
+      });
+    }
+    return map;
+  }, [student]);
+
+  const purposeFilter = useMemo(() => {
+    if (selectedPurpose === "course") {
+      return (code) => typeof code === "string" && code.startsWith("course/");
+    }
+    if (selectedPurpose === "dorm") {
+      return (code) => typeof code === "string" && code.startsWith("dorm/");
+    }
+    return null; // tuition or default: no filtering
+  }, [selectedPurpose]);
+
+  const filteredInvoices = useMemo(() => {
+    const list = Array.isArray(student?.invoices) ? student.invoices : [];
+    if (!purposeFilter) return list;
+
+    return list.filter((inv) => {
+      const code =
+        inv?.billing?.code || billingCodeById.get(inv?.billing_id) || null;
+      return purposeFilter(code);
+    });
+  }, [student, purposeFilter, billingCodeById]);
+
+  const invoiceStatus = useMemo(
+    () => normalizeInvoices(filteredInvoices),
+    [filteredInvoices, normalizeInvoices],
+  );
+
+  const isCourse = selectedPurpose === "course";
+  const isDorm = selectedPurpose === "dorm";
 
   const walletBalance =
     student.wallet_balance ?? student.wallet?.balance ?? "-";
@@ -52,9 +93,23 @@ function TableRow({ student, onAddPayment, showDiscounts = true, months }) {
             </button>
           </td>
         ) : null}
-        {monthsToRender.map((m) => (
-          <TableCell key={m.key} value={invoiceStatus[m.key]} />
-        ))}
+        {monthsToRender.map((m) => {
+          const monthHasInvoice = Boolean(invoiceStatus[m.key]);
+          const cellValue =
+            invoiceStatus[m.key] || (isCourse || isDorm ? { status: "N/A" } : undefined);
+
+          return (
+            <TableCell
+              key={m.key}
+              value={cellValue}
+              onClick={() => {
+                if (!monthHasInvoice) return;
+                setActiveMonthKey(m.key);
+                setShowInvoiceModal(true);
+              }}
+            />
+          );
+        })}
         <td className="px-3 py-2 border text-right font-semibold text-gray-900 w-18 min-w-18 max-w-18">
           <button
             type="button"
@@ -87,6 +142,12 @@ function TableRow({ student, onAddPayment, showDiscounts = true, months }) {
         payments={student.payments || []}
         studentName={student.full_name}
         walletBalance={walletBalance}
+      />
+      <InvoiceModule
+        open={showInvoiceModal}
+        onClose={() => setShowInvoiceModal(false)}
+        student={student}
+        monthKey={activeMonthKey}
       />
     </>
   );

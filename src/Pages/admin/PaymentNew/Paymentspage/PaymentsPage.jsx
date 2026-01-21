@@ -72,7 +72,14 @@ function PaymentsPage() {
   const [selectedTeachers, setSelectedTeachers] = useState(() =>
     loadSavedFilter("payments.selectedTeachers", null, []),
   );
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(() => {
+    try {
+      const saved = localStorage.getItem("payments.showFilters");
+      return saved === "true";
+    } catch {
+      return false;
+    }
+  });
 
   const {
     searchTerm,
@@ -80,10 +87,13 @@ function PaymentsPage() {
     selectedPurpose,
     students,
     dormStudents,
+    courseStudents,
     meta,
     metaDorm,
+    metaCourse,
     normalizeInvoices,
     teachers,
+    classes,
   } = useGlobalContext();
 
   const activeFilterCount = useMemo(() => {
@@ -139,6 +149,14 @@ function PaymentsPage() {
     }
   }, [selectedTeachers]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem("payments.showFilters", showFilters.toString());
+    } catch (err) {
+      console.warn("Failed to persist showFilters", err);
+    }
+  }, [showFilters]);
+
   // Drop stale teacher selections so missing options do not hide all rows by default
   useEffect(() => {
     if (!Array.isArray(teachers) || teachers.length === 0) {
@@ -159,18 +177,34 @@ function PaymentsPage() {
     });
   }, [teachers]);
 
+  // Drop stale class selections so old grade values don't persist
+  useEffect(() => {
+    if (!Array.isArray(classes) || classes.length === 0) {
+      setSelectedGrades((prev) => (prev.length ? [] : prev));
+      return;
+    }
+
+    const allowed = classes.map((c) => c.class_pair || c.grade).filter(Boolean);
+
+    setSelectedGrades((prev) => {
+      const valid = prev.filter((k) => allowed.includes(k));
+      return valid.length === prev.length ? prev : valid;
+    });
+  }, [classes]);
+
   const isDorm = selectedPurpose === "dorm";
-  const rawList = isDorm ? dormStudents : students;
+  const isCourse = selectedPurpose === "course";
+  const rawList = isDorm ? dormStudents : isCourse ? courseStudents : students;
 
   // Apply filters to student list
   const activeList = useMemo(() => {
     let filtered = rawList;
 
-    // Filter by grade
+    // Filter by class
     if (selectedGrades.length > 0) {
       filtered = filtered.filter((s) => {
-        const grade = s.group?.grade || s.group?.class_pair?.split("-")[0];
-        return grade && selectedGrades.includes(grade);
+        const classPair = s.group?.class_pair || s.group?.grade;
+        return classPair && selectedGrades.includes(classPair);
       });
     }
 
@@ -224,7 +258,9 @@ function PaymentsPage() {
 
   const activeTotal = isDorm
     ? (metaDorm?.total ?? rawList.length)
-    : (meta?.total ?? rawList.length);
+    : isCourse
+      ? (metaCourse?.total ?? rawList.length)
+      : (meta?.total ?? rawList.length);
 
   const toggleMonth = (key) => {
     setSelectedMonths((prev) =>
