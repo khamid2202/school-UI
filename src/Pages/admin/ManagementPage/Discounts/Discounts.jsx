@@ -54,7 +54,7 @@ function Discounts() {
         code: b?.code,
         label: b?.code || `Billing ${b?.id}`,
       })),
-    [billings]
+    [billings],
   );
   // console.log("Billing options:", billingOptions);
 
@@ -76,7 +76,7 @@ function Discounts() {
 
   const activeDiscounts = useMemo(
     () => discounts.filter((d) => d.status !== "inactive"),
-    [discounts]
+    [discounts],
   );
 
   const fetchDiscounts = async () => {
@@ -87,8 +87,8 @@ function Discounts() {
       const payload = Array.isArray(res?.data?.discounts)
         ? res.data.discounts
         : Array.isArray(res?.data)
-        ? res.data
-        : [];
+          ? res.data
+          : [];
       setDiscounts(payload.map(normalizeDiscount));
     } catch (err) {
       setError(err?.response?.data?.message || "Failed to load discounts");
@@ -125,21 +125,21 @@ function Discounts() {
     setSearching(true);
     setSearchError(null);
     try {
-      const res = await api.get(endpoints.GET_ALL_STUDENTS_FOR_PAYMENTS, {
+      const res = await api.get(endpoints.GET_STUDENTS_FOR_PAYMENTS, {
         q: query.trim(),
         // limit: 10,
       });
       const payload = Array.isArray(res?.data?.students)
         ? res.data.students
         : Array.isArray(res?.data)
-        ? res.data
-        : [];
+          ? res.data
+          : [];
 
       console.log("Search results:", payload);
       setSearchResults(payload);
     } catch (err) {
       setSearchError(
-        err?.response?.data?.message || "Failed to search students"
+        err?.response?.data?.message || "Failed to search students",
       );
     } finally {
       setSearching(false);

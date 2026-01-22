@@ -191,6 +191,9 @@ function InvoiceModule({ open, onClose, student, monthKey }) {
                           <p>{formatMoney(inv.remaining_amount)}</p>
                         </div>
                       </div>
+                      <p className="mt-1 text-md text-gray-600">
+                        Discount: {inv.discount_percent ?? 0}%
+                      </p>
                       <p className="mt-1 text-[11px] text-gray-500">
                         Created {formatDate(inv.created_at) || "–"}
                       </p>
