@@ -29,7 +29,7 @@ function TableCell({ value, onClick }) {
   })();
 
   return (
-    <td className="px-2 py-2 text-center border">
+    <td className="px-2 py-1 text-center border">
       {isObject ? (
         <button
           onClick={onClick}

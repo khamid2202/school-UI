@@ -1,10 +1,12 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import TableCell from "../TableCell/TableCell";
 import { monthsOptions } from "../Filters/MonthsToFilter";
 import { useGlobalContext } from "../../../../Hooks/UseContext";
 import DiscountModule from "../TableModules/DiscountModule";
 import TotalPaidModule from "../TableModules/TotalPaidModule";
 import InvoiceModule from "../TableModules/InvoiceModule";
+import { api } from "../../../../Library/RequestMaker";
+import toast from "react-hot-toast";
 
 function TableRow({ student, onAddPayment, showDiscounts = true, months }) {
   const { normalizeDiscounts, normalizeInvoices, selectedPurpose } =
@@ -13,6 +15,11 @@ function TableRow({ student, onAddPayment, showDiscounts = true, months }) {
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [activeMonthKey, setActiveMonthKey] = useState(null);
+  const [fullName, setFullName] = useState(student.full_name || "");
+
+  useEffect(() => {
+    setFullName(student.full_name || "");
+  }, [student.full_name]);
 
   const discountsDisplay = normalizeDiscounts(student.discounts);
 
@@ -61,23 +68,73 @@ function TableRow({ student, onAddPayment, showDiscounts = true, months }) {
   const monthsToRender =
     Array.isArray(months) && months.length > 0 ? months : monthsOptions;
 
+  const handleFullNameChange = async (e) => {
+    const newName = e.target.value.trim();
+    setFullName(newName);
+
+    const studentId = student.student_id ?? student.id;
+    if (!studentId) return;
+    if (newName === (student.full_name || "")) return;
+
+    try {
+      await api.patch(`/students/${studentId}`, { full_name: newName });
+      toast.success("Full name updated successfully");
+    } catch (error) {
+      console.error("Failed to update student name", error);
+      setFullName(student.full_name || "");
+      toast.error("Failed to update full name");
+    }
+  };
+
   return (
     <>
-      <tr className="  hover:bg-gray-50">
-        <td className="sticky left-0 z-10 w-16 min-w-16 max-w-16 border-b bg-white px-3 py-2 font-medium text-gray-900">
+      <tr
+        className={
+          `hover:bg-gray-50` +
+          (student.status === "inactive" || student.status === "deactivated"
+            ? " bg-red-50 "
+            : "")
+        }
+      >
+        <td
+          className={
+            `sticky left-0 z-10 w-16 min-w-16 max-w-16 border-b px-3 py-1 font-medium text-gray-900 ` +
+            (student.status === "inactive" || student.status === "deactivated"
+              ? "bg-red-50"
+              : "bg-white")
+          }
+        >
           {student.student_id}
         </td>
-        <td className="sticky left-16 z-10 w-56 min-w-56 max-w-56 border-b bg-white px-3 py-2 font-medium text-gray-900">
-          {student.full_name}
+        <td
+          className={
+            `sticky left-16 z-10 w-56 min-w-56 max-w-56 border-b px-1 py-1 font-medium ` +
+            (student.status === "inactive" || student.status === "deactivated"
+              ? "bg-red-50"
+              : "bg-white text-gray-900")
+          }
+        >
+          <input
+            className={
+              `flex w-full rounded-md px-1 py-0.5 ` +
+              (student.status === "inactive" || student.status === "deactivated"
+                ? "bg-red-50  placeholder-red-400 border-red-200"
+                : "bg-white text-gray-900 border-gray-200")
+            }
+            type="text"
+            onBlur={handleFullNameChange}
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+          />
         </td>
-        <td className="px-3 py-2 border w-24 min-w-24 max-w-24">
+        <td className="px-3 py-1 border w-24 min-w-24 max-w-24">
           {student.group?.class_pair || "-"}
         </td>
-        <td className="px-3 py-2 border w-32 min-w-32 max-w-32">
+        <td className="px-3 py-1 border w-32 min-w-32 max-w-32">
           {student.group?.teacher_name || "-"}
         </td>
         {showDiscounts ? (
-          <td className="px-3 py-2 border text-center w-18 min-w-18 max-w-18">
+          <td className="px-3 py-1 border text-center w-18 min-w-18 max-w-18">
             <button
               type="button"
               onClick={() => setShowDiscountModal(true)}
@@ -111,7 +168,7 @@ function TableRow({ student, onAddPayment, showDiscounts = true, months }) {
             />
           );
         })}
-        <td className="px-3 py-2 border text-right font-semibold text-gray-900 w-18 min-w-18 max-w-18">
+        <td className="px-3 py-1 border text-right font-semibold text-gray-900 w-18 min-w-18 max-w-18">
           <button
             type="button"
             onClick={() => setShowWalletModal(true)}
@@ -120,7 +177,7 @@ function TableRow({ student, onAddPayment, showDiscounts = true, months }) {
             {walletBalance}
           </button>
         </td>
-        <td className="px-3 py-2 border text-center">
+        <td className="px-3 py-1 border text-center">
           <button
             type="button"
             onClick={() => onAddPayment?.(student)}

@@ -36,7 +36,7 @@ export const endpoints = {
   //Dorm students
   GET_DORM_STUDENTS: `/students?academic_year_id=1&include_group=1&include_billings=1&filter={"billing_codes":["dorm/700"]}&sort=[{"field":"full_name"}]&include_wallet=1&include_invoices=1&include_payments=1`,
   ASSIGN_BILLING_CODE: `/students/assign-billings`,
-  REMOVE_FROM_GROUP: `/students/remove-from-group`,
+  REMOVE_FROM_GROUP: `/students`,
 
   //Subjects
   GET_DATA_FROM_TIMETABLE: `/timetable?academic_year_id=1`,
