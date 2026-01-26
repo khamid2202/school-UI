@@ -8,7 +8,13 @@ import InvoiceModule from "../TableModules/InvoiceModule";
 import { api } from "../../../../Library/RequestMaker";
 import toast from "react-hot-toast";
 
-function TableRow({ student, onAddPayment, showDiscounts = true, months }) {
+function TableRow({
+  student,
+  onAddPayment,
+  showDiscounts = true,
+  months,
+  onStudentsRefresh,
+}) {
   const { normalizeDiscounts, normalizeInvoices, selectedPurpose } =
     useGlobalContext();
   const [showDiscountModal, setShowDiscountModal] = useState(false);
@@ -69,6 +75,7 @@ function TableRow({ student, onAddPayment, showDiscounts = true, months }) {
     Array.isArray(months) && months.length > 0 ? months : monthsOptions;
 
   const handleFullNameChange = async (e) => {
+    console.log("Handling full name change");
     const newName = e.target.value.trim();
     setFullName(newName);
 
@@ -125,6 +132,11 @@ function TableRow({ student, onAddPayment, showDiscounts = true, months }) {
             onBlur={handleFullNameChange}
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.target.blur(); // triggers onBlur
+              }
+            }}
           />
         </td>
         <td className="px-3 py-1 border w-24 min-w-24 max-w-24">
@@ -203,9 +215,16 @@ function TableRow({ student, onAddPayment, showDiscounts = true, months }) {
       />
       <InvoiceModule
         open={showInvoiceModal}
-        onClose={() => setShowInvoiceModal(false)}
+        onClose={() => {
+          setShowInvoiceModal(false);
+          if (typeof onStudentsRefresh === "function") onStudentsRefresh();
+        }}
         student={student}
         monthKey={activeMonthKey}
+        onInvoicesUpdated={async () => {
+          if (typeof onStudentsRefresh === "function")
+            await onStudentsRefresh();
+        }}
       />
     </>
   );

@@ -181,6 +181,15 @@ function PaymentTable({ visibleMonths, filteredStudents }) {
                 months={monthsToShow}
                 showDiscounts={showDiscounts}
                 onAddPayment={handleAddPayment}
+                onStudentsRefresh={async () => {
+                  if (isDorm) {
+                    await refetchDorm?.();
+                  } else if (isCourse) {
+                    await refetchCourse?.();
+                  } else {
+                    await refetch?.();
+                  }
+                }}
               />
             ))}
           </tbody>

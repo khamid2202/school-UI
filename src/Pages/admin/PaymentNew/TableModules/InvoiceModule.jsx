@@ -1,4 +1,7 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
+import { endpoints } from "../../../../Library/Endpoints";
+import { api } from "../../../../Library/RequestMaker";
+import toast from "react-hot-toast";
 
 const monthKeyToNumber = {
   jan: 1,
@@ -32,23 +35,31 @@ const monthNumberToLabel = {
 
 const formatMoney = (val) => {
   const num = Number(val);
-  if (!Number.isFinite(num)) return "-";
-  return num.toLocaleString("en-US", { minimumFractionDigits: 0 });
+  if (!Number.isFinite(num)) return "0";
+  return num.toLocaleString("en-US");
 };
 
 const formatDate = (value) => {
   const ts = Date.parse(value);
   if (Number.isNaN(ts)) return "";
   const date = new Date(ts);
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 };
 
-function InvoiceModule({ open, onClose, student, monthKey }) {
+function InvoiceModule({
+  open,
+  onClose,
+  student,
+  monthKey,
+  onInvoicesUpdated,
+}) {
+  const [editMode, setEditMode] = useState(false);
+  const [editedRequired, setEditedRequired] = useState({});
+  const [isSaving, setIsSaving] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const monthNumber = monthKeyToNumber[monthKey];
 
+  // --- Logic Memos (Keeping your variable names) ---
   const billingsById = useMemo(() => {
     const map = new Map();
     if (Array.isArray(student?.billings)) {
@@ -100,145 +111,311 @@ function InvoiceModule({ open, onClose, student, monthKey }) {
     );
   }, [invoicesForMonth]);
 
+  // --- Handlers ---
+  const handleEditInvoices = () => {
+    const initial = {};
+    invoicesForMonth.forEach((inv) => {
+      initial[inv.id] = inv.total_required_amount;
+    });
+    setEditedRequired(initial);
+    setEditMode(true);
+  };
+
+  const handleRequiredChange = (id, value) => {
+    if (/^\d*$/.test(value)) {
+      setEditedRequired((prev) => ({ ...prev, [id]: value }));
+    }
+  };
+
+  const handleSaveInvoices = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
+    try {
+      const updatePromises = Object.entries(editedRequired).map(
+        async ([id, value]) => {
+          const orig = invoicesForMonth.find((inv) => inv.id === Number(id));
+          if (!orig || String(orig.total_required_amount) === String(value))
+            return null;
+          const url = `${endpoints.UPDATE_INVOICE}/${id}`;
+          return api.patch(url, { subtotal_required_amount: Number(value) });
+        },
+      );
+      await Promise.all(updatePromises);
+      toast.success("Invoices updated successfully");
+      setEditMode(false);
+      setEditedRequired({});
+      if (typeof onInvoicesUpdated === "function") {
+        try {
+          setIsRefreshing(true);
+          await onInvoicesUpdated();
+        } finally {
+          setIsRefreshing(false);
+        }
+      }
+    } catch (err) {
+      toast.error("Failed to update invoices");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCancelEdit = () => setEditMode(false);
+
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-      <div className="flex w-full max-w-3xl flex-col rounded-2xl bg-white shadow-xl max-h-[90vh]">
-        <div className="flex items-start justify-between border-b px-5 py-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm px-4">
+      <div className="flex w-full max-w-4xl flex-col rounded-3xl bg-white shadow-2xl max-h-[90vh] overflow-hidden border border-slate-200">
+        {/* Header Section */}
+        <div className="flex items-center justify-between border-b border-slate-100 px-8 py-6 bg-white">
           <div>
-            <p className="text-xs uppercase tracking-wide text-gray-500">
-              Invoice history
+            <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-500 mb-1">
+              Records
             </p>
-            <h2 className="text-lg font-semibold text-gray-900">
-              {student?.full_name || "Student"} —{" "}
-              {monthNumberToLabel[monthNumber] || monthKey}
+            <h2 className="text-xl font-bold text-slate-900">
+              {student?.full_name || "Student"}
+              <span className="mx-2 text-slate-300">—</span>
+              <span className="text-slate-600 font-medium">
+                {monthNumberToLabel[monthNumber] || monthKey}
+              </span>
             </h2>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200"
-            aria-label="Close"
+            className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-slate-100 text-slate-400 transition-colors"
           >
-            ×
+            <span className="text-2xl">×</span>
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-5 pb-5">
-          <div className="grid gap-4 pt-4 sm:grid-cols-3">
-            <div className="rounded-xl bg-slate-50 px-4 py-3">
-              <p className="text-xs font-medium text-slate-500">Required</p>
-              <p className="text-xl font-semibold text-slate-900">
-                {formatMoney(totals.required)}
-              </p>
-            </div>
-            <div className="rounded-xl bg-slate-50 px-4 py-3">
-              <p className="text-xs font-medium text-slate-500">Paid</p>
-              <p className="text-xl font-semibold text-emerald-700">
-                {formatMoney(totals.paid)}
-              </p>
-            </div>
-            <div className="rounded-xl bg-slate-50 px-4 py-3">
-              <p className="text-xs font-medium text-slate-500">Remaining</p>
-              <p className="text-xl font-semibold text-amber-700">
-                {formatMoney(totals.remaining)}
-              </p>
-            </div>
+        <div className="flex-1 overflow-y-auto px-8 py-4 bg-slate-50/30">
+          {/* Summary Cards */}
+          <div className="grid gap-4 sm:grid-cols-3 mb-4">
+            <SummaryCard
+              label="Required"
+              value={totals.required}
+              accent="slate"
+            />
+            <SummaryCard label="Paid" value={totals.paid} accent="emerald" />
+            <SummaryCard
+              label="Remaining"
+              value={totals.remaining}
+              accent="amber"
+              highlight
+            />
           </div>
 
-          <div className="mt-5 grid gap-5 sm:grid-cols-2">
-            <div className="rounded-xl border border-slate-100">
-              <div className="border-b px-4 py-3">
-                <h3 className="text-sm font-semibold text-gray-900">
+          <div className="grid gap-6 sm:grid-cols-2">
+            {/* INVOICES SECTION */}
+            <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+              <div className="flex items-center justify-between border-b border-slate-50 bg-slate-50/50 px-4 py-2">
+                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-tight">
                   Invoices
                 </h3>
-              </div>
-              {invoicesForMonth.length === 0 ? (
-                <div className="px-4 py-6 text-sm text-gray-500">
-                  No invoices for this month.
-                </div>
-              ) : (
-                <ul className="divide-y divide-slate-100">
-                  {invoicesForMonth.map((inv) => (
-                    <li
-                      key={inv.id}
-                      className="px-4 py-3 text-sm text-gray-800"
+                <div className="flex gap-2">
+                  <div
+                    className={editMode ? "flex gap-2" : "hidden"}
+                    aria-hidden={!editMode}
+                  >
+                    <button
+                      onClick={handleSaveInvoices}
+                      disabled={isSaving || isRefreshing}
+                      className={`text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all ${
+                        isSaving || isRefreshing
+                          ? "bg-emerald-300 text-white cursor-not-allowed"
+                          : "bg-emerald-600 text-white hover:bg-emerald-700"
+                      }`}
                     >
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-gray-900">
-                          {inv.billingName || inv.code || "Invoice"}
+                      {isSaving ? (
+                        <span className="flex items-center gap-2">
+                          <svg
+                            className="w-3 h-3 animate-spin"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <circle
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="rgba(255,255,255,0.3)"
+                              strokeWidth="4"
+                            />
+                            <path
+                              d="M22 12a10 10 0 00-10-10"
+                              stroke="white"
+                              strokeWidth="4"
+                              strokeLinecap="round"
+                            />
+                          </svg>
+                          Saving...
                         </span>
-                        <span className="text-xs uppercase tracking-wide text-gray-500">
-                          {inv.status}
+                      ) : isRefreshing ? (
+                        <span className="flex items-center gap-2">
+                          <svg
+                            className="w-3 h-3 animate-spin text-white"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <circle
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="rgba(255,255,255,0.3)"
+                              strokeWidth="4"
+                            />
+                            <path
+                              d="M22 12a10 10 0 00-10-10"
+                              stroke="white"
+                              strokeWidth="4"
+                              strokeLinecap="round"
+                            />
+                          </svg>
+                          Refreshing...
                         </span>
-                      </div>
-                      <div className="mt-1 grid grid-cols-3 gap-2 text-xs text-gray-600">
+                      ) : (
+                        "Save"
+                      )}
+                    </button>
+                    <button
+                      onClick={handleCancelEdit}
+                      className="text-[11px] font-bold bg-white border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-all"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+
+                  <div
+                    className={editMode ? "hidden" : ""}
+                    aria-hidden={editMode}
+                  >
+                    <button
+                      onClick={handleEditInvoices}
+                      className="text-[11px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-all"
+                    >
+                      Edit Invoices
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {invoicesForMonth.length === 0 ? (
+                <EmptyState text="No invoices for this month." />
+              ) : (
+                <div className="divide-y divide-slate-50">
+                  {invoicesForMonth.map((inv) => (
+                    <div key={inv.id} className="p-5">
+                      <div className="flex items-start justify-between mb-3">
                         <div>
-                          <p className="font-semibold text-gray-700">
+                          <p className="font-bold text-slate-900 text-sm leading-none mb-1">
+                            {inv.billingName || "Tuition fee"}
+                          </p>
+                          <p className="text-[10px] font-mono text-slate-400 uppercase">
+                            ID: {inv.id}
+                          </p>
+                        </div>
+                        <StatusBadge status={inv.status} />
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-3">
+                        <div>
+                          <label className="text-[9px] font-bold text-slate-400 uppercase block mb-1">
                             Required
+                          </label>
+                          {editMode ? (
+                            <input
+                              type="text"
+                              className="w-full rounded-md border border-slate-200 bg-green-100 px-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                              value={editedRequired[inv.id] ?? ""}
+                              onChange={(e) =>
+                                handleRequiredChange(inv.id, e.target.value)
+                              }
+                            />
+                          ) : (
+                            <input
+                              type="text"
+                              className="w-full rounded-md border border-slate-200 bg-slate-50 px-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                              value={formatMoney(inv.total_required_amount)}
+                              disabled
+                            />
+                          )}
+                        </div>
+                        <div>
+                          <label className="text-[9px] font-bold text-slate-400 uppercase block mb-1">
+                            Paid
+                          </label>
+                          <p className="text-sm font-semibold text-emerald-600">
+                            {formatMoney(inv.total_paid_amount)}
                           </p>
-                          <p>{formatMoney(inv.total_required_amount)}</p>
                         </div>
                         <div>
-                          <p className="font-semibold text-gray-700">Paid</p>
-                          <p>{formatMoney(inv.total_paid_amount)}</p>
-                        </div>
-                        <div>
-                          <p className="font-semibold text-gray-700">
+                          <label className="text-[9px] font-bold text-slate-400 uppercase block mb-1">
                             Remaining
+                          </label>
+                          <p className="text-sm font-semibold text-slate-900">
+                            {formatMoney(inv.remaining_amount)}
                           </p>
-                          <p>{formatMoney(inv.remaining_amount)}</p>
                         </div>
                       </div>
-                      <p className="mt-1 text-md text-gray-600">
-                        Discount: {inv.discount_percent ?? 0}%
-                      </p>
-                      <p className="mt-1 text-[11px] text-gray-500">
-                        Created {formatDate(inv.created_at) || "–"}
-                      </p>
-                    </li>
+                      <div className="mt-4 flex items-center justify-between border-t border-slate-50 pt-3">
+                        <p className="text-[11px] text-slate-400 italic">
+                          Discount: {inv.discount_percent ?? 0}%
+                        </p>
+                        <p className="text-[10px] text-slate-400 font-medium">
+                          Issued {formatDate(inv.created_at)}
+                        </p>
+                      </div>
+                    </div>
                   ))}
-                </ul>
+                </div>
               )}
             </div>
 
-            <div className="rounded-xl border border-slate-100">
-              <div className="border-b px-4 py-3">
-                <h3 className="text-sm font-semibold text-gray-900">
-                  Payments / withdrawals
+            {/* PAYMENTS SECTION */}
+            <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+              <div className="border-b border-slate-50 bg-slate-50/50 px-5 py-4">
+                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-tight">
+                  Payments / Withdrawals
                 </h3>
               </div>
               {paymentsForMonth.length === 0 ? (
-                <div className="px-4 py-6 text-sm text-gray-500">
-                  No payments recorded in this month.
-                </div>
+                <EmptyState text="No payments recorded in this month." />
               ) : (
-                <ul className="divide-y divide-slate-100">
+                <div className="divide-y divide-slate-50">
                   {paymentsForMonth.map((p) => (
-                    <li key={p.id} className="px-4 py-3 text-sm text-gray-800">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-gray-900">
+                    <div
+                      key={p.id}
+                      className="p-5 hover:bg-slate-50/30 transition-colors"
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold text-slate-900">
                           {formatMoney(p.amount)}
                         </span>
-                        <span className="text-xs uppercase tracking-wide text-gray-500">
-                          {p.method || ""}
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-500 uppercase tracking-tighter">
+                          {p.method}
                         </span>
                       </div>
-                      <p className="text-xs text-gray-600">
+                      <p className="text-xs text-slate-500 line-clamp-1 mb-2 font-medium">
                         Purpose: {p.purpose || "—"}
                       </p>
-                      <p className="text-[11px] text-gray-500">
-                        {formatDate(p.created_at) || "–"}
-                      </p>
-                      {p.comment ? (
-                        <p className="mt-1 text-xs text-gray-500">
-                          {p.comment}
-                        </p>
-                      ) : null}
-                    </li>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-slate-400 font-medium italic">
+                          {formatDate(p.created_at)}
+                        </span>
+                        {p.comment && (
+                          <span
+                            title={p.comment}
+                            className="cursor-help text-indigo-400"
+                          >
+                            ●
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   ))}
-                </ul>
+                </div>
               )}
             </div>
           </div>
@@ -247,5 +424,47 @@ function InvoiceModule({ open, onClose, student, monthKey }) {
     </div>
   );
 }
+
+// Sub-components for cleaner structure
+const SummaryCard = ({ label, value, accent, highlight }) => {
+  const styles = {
+    slate: "border-slate-200 text-slate-900",
+    emerald: "border-emerald-100 text-emerald-700 bg-emerald-50/30",
+    amber: "border-amber-100 text-amber-700 bg-amber-50/30",
+  };
+  return (
+    <div
+      className={`rounded-2xl border p-3 shadow-sm bg-white ${styles[accent]}`}
+    >
+      <p className="text-[10px] font-bold uppercase tracking-widest opacity-60 mb-1">
+        {label}
+      </p>
+      <p className={`text-2xl ${highlight ? "font-black" : "font-bold"}`}>
+        {formatMoney(value)}
+      </p>
+    </div>
+  );
+};
+
+const StatusBadge = ({ status }) => {
+  const isPaid = status?.toLowerCase() === "paid";
+  return (
+    <span
+      className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+        isPaid
+          ? "bg-emerald-50 border-emerald-100 text-emerald-600"
+          : "bg-slate-100 border-slate-200 text-slate-500"
+      }`}
+    >
+      {status || "Unknown"}
+    </span>
+  );
+};
+
+const EmptyState = ({ text }) => (
+  <div className="px-5 py-12 text-center">
+    <p className="text-sm text-slate-400 font-medium">{text}</p>
+  </div>
+);
 
 export default InvoiceModule;

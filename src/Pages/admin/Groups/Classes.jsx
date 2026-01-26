@@ -221,14 +221,14 @@ function Classes() {
                 >
                   <div className="flex items-start justify-between">
                     <div className="space-y-1">
-                      <div
+                      {/* <div
                         className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm font-semibold ${color}`}
                       >
                         {g.class_pair_compact || g.name}
                         <span className="text-xs font-medium text-slate-500">
                           Grade {g.grade}
                         </span>
-                      </div>
+                      </div> */}
                       <p className="text-sm text-slate-500">
                         {g.class_pair || g.name}
                       </p>
@@ -253,11 +253,8 @@ function Classes() {
                     </div>
                   </div>
 
-                  <div className="mt-auto flex items-center justify-between pt-2 text-xs text-slate-500">
-                    <span className="flex items-center gap-1">
-                      <Clock size={14} /> Last updated{" "}
-                      {formatDate(g.updated_at)}
-                    </span>
+                  <div className="mt-auto flex items-center justify-end pt-2 text-xs text-slate-500">
+                    {/*  */}
                     <button
                       type="button"
                       onClick={() =>
