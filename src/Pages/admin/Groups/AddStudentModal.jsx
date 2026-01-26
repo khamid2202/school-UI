@@ -19,6 +19,7 @@ export default function AddStudentModal({
 
   const [fullName, setFullName] = useState("");
   const [joinDate, setJoinDate] = useState(getTodayDate);
+  const [laId, setLaId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -27,6 +28,7 @@ export default function AddStudentModal({
   const handleClose = () => {
     setFullName("");
     setJoinDate(getTodayDate());
+    setLaId("");
     setError("");
     setLoading(false);
     onClose && onClose();
@@ -35,8 +37,13 @@ export default function AddStudentModal({
   const handleSubmit = async (e) => {
     e.preventDefault();
     const trimmedName = fullName.trim();
+    const trimmedLaId = (laId || "").trim();
     if (!trimmedName) {
       setError("Full name is required");
+      return;
+    }
+    if (!trimmedLaId) {
+      setError("LA ID is required");
       return;
     }
     if (!groupId) {
@@ -51,6 +58,7 @@ export default function AddStudentModal({
     try {
       const createRes = await api.post(endpoints.CREATE_STUDENT, {
         full_name: trimmedName,
+        la_id: trimmedLaId,
       });
       const createdStudent = createRes?.data?.student || createRes?.data;
       if (!createdStudent || !createdStudent.id) {
@@ -68,6 +76,7 @@ export default function AddStudentModal({
         ...createdStudent,
         student_id: createdStudent.id,
         full_name: createdStudent.full_name || trimmedName,
+        la_id: createdStudent.la_id || trimmedLaId,
         join_date: joinDateToUse,
         status: createdStudent.status || "active",
         ...(defaultClass ? { group: defaultClass } : {}),
@@ -108,6 +117,18 @@ export default function AddStudentModal({
               onChange={(e) => setFullName(e.target.value)}
               className="mt-1 block w-full border px-3 py-2 rounded-md"
               placeholder="Student full name"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              LA ID
+            </label>
+            <input
+              value={laId}
+              onChange={(e) => setLaId(e.target.value)}
+              className="mt-1 block w-full border px-3 py-2 rounded-md"
+              placeholder="LA ID"
               required
             />
           </div>
