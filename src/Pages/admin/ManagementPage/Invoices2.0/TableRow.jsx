@@ -41,7 +41,7 @@ function TableRow({
         const pendingKey = `${studentId}-${code}`;
         const hasPending = Object.prototype.hasOwnProperty.call(
           pendingAssignments,
-          pendingKey
+          pendingKey,
         );
         const pendingValue = pendingAssignments[pendingKey];
         const effectiveChecked =

@@ -10,28 +10,17 @@ import ClassFilter from "./Filters/ClassFilter";
 import TeacherFilter from "./Filters/TeacherFilter";
 import InvoiceCodeFilter from "./Filters/InvoiceCodeFilter";
 
-const SPECIAL_TUITION_CLASSES = new Set([
-  "4-A",
-  "4-B",
-  "1-A",
-  "1-B",
-  "1-D",
-  "1-E",
-  "1-G",
-  "2-A",
-  "2-B",
-  "3-A",
-  "3-B",
-  "3-D",
-]);
-
+//GET ALLOWED TUITION IS NOT class specific HARDCODED ANYMORE
 const getAllowedTuitionAmount = (student) => {
-  const classPair =
-    student?.group?.class_pair ||
-    [student?.group?.grade, student?.group?.class].filter(Boolean).join("-");
+  const billingCode = student?.billings?.find(
+    (b) => typeof b?.code === "string" && b.code.startsWith("tuition"),
+  )?.code;
 
-  if (SPECIAL_TUITION_CLASSES.has(classPair)) return 2300;
-  return 2600;
+  if (typeof billingCode !== "string") return null;
+  const parts = billingCode.split("/");
+  if (parts.length < 2) return null;
+  const num = Number(parts[1]);
+  return Number.isFinite(num) ? num : null;
 };
 
 const extractTuitionAmountFromCode = (code) => {
