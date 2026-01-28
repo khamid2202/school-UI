@@ -47,7 +47,7 @@ function Timetable() {
         setGroups(groupsRes.data?.groups || []);
         const rawUsers = teachersRes.data?.users || teachersRes.data || [];
         const onlyTeachers = rawUsers.filter((u) =>
-          Array.isArray(u.roles) ? u.roles.includes("teacher") : true
+          Array.isArray(u.roles) ? u.roles.includes("teacher") : true,
         );
         setTeachers(onlyTeachers);
       } catch (e) {
@@ -140,7 +140,7 @@ function Timetable() {
       }
     });
     const timeSlots = Array.from(timeSlotsMap.values()).sort((a, b) =>
-      a.start.localeCompare(b.start)
+      (a.start || "").localeCompare(b.start || ""),
     );
 
     // Extract unique classes and sort them
@@ -157,7 +157,9 @@ function Timetable() {
     });
     const classesSorted = Array.from(classesMap.values()).sort((a, b) => {
       if (a.grade !== b.grade) return a.grade - b.grade;
-      return a.class.localeCompare(b.class);
+      return (a.class || "")
+        .toString()
+        .localeCompare((b.class || "").toString());
     });
 
     // Build grid: Map<day_timeId_groupId, lesson>
@@ -205,7 +207,7 @@ function Timetable() {
       console.error(err);
       setUploadError(
         err.response?.data?.message ||
-          "Upload failed. Please check the file format."
+          "Upload failed. Please check the file format.",
       );
     } finally {
       setUploading(false);
@@ -295,8 +297,8 @@ function Timetable() {
                     .slice()
                     .sort((a, b) =>
                       `${a.grade}-${a.class}`.localeCompare(
-                        `${b.grade}-${b.class}`
-                      )
+                        `${b.grade}-${b.class}`,
+                      ),
                     )
                     .map((g) => (
                       <option key={g.id} value={g.id}>
@@ -317,7 +319,7 @@ function Timetable() {
                   {teachers
                     .slice()
                     .sort((a, b) =>
-                      (a.full_name || "").localeCompare(b.full_name || "")
+                      (a.full_name || "").localeCompare(b.full_name || ""),
                     )
                     .map((t) => (
                       <option key={t.id} value={t.id}>
@@ -378,7 +380,7 @@ function Timetable() {
                       >
                         <div className="h-5 bg-gray-200 rounded animate-pulse mx-auto w-16"></div>
                       </th>
-                    )
+                    ),
                   )}
                 </tr>
               </thead>
@@ -419,10 +421,10 @@ function Timetable() {
                                 <div className="h-3 bg-gray-200 rounded animate-pulse w-1/2"></div>
                               </div>
                             </td>
-                          )
+                          ),
                         )}
                       </tr>
-                    ))
+                    )),
                 )}
               </tbody>
             </table>
