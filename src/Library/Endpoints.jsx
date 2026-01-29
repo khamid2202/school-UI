@@ -20,6 +20,11 @@ export const endpoints = {
   CREATE_PAYMENT: `/students/payments`,
 
   GET_BILLINGS: `/billings`,
+  GET_BILLING_BY_ID: (id) => `/billings/${id}`,
+  CREATE_BILLING: `/billings`,
+  UPDATE_BILLING: (id) => `/billings/${id}`,
+  DELETE_BILLING: (id) => `/billings/${id}`,
+
   CREATE_INVOICE: `/students/invoices`,
   GET_SUBJECTS: `/subjects`,
   GET_STUDENTS_OF_A_CLASS: `/students?academic_year_id=1&include_group=1&filter=`,

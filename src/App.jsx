@@ -23,6 +23,7 @@ import { DataProvider } from "./Hooks/UseContext";
 import { AuthProvider } from "./Hooks/AuthContext";
 import AdminTools from "./Pages/admin/ManagementPage/AdminTools.jsx";
 import Discounts from "./Pages/admin/ManagementPage/Discounts/Discounts.jsx";
+import Billings from "./Pages/admin/ManagementPage/Billings/Billlings.jsx";
 import New_Invoices from "./Pages/admin/ManagementPage/Invoices2.0/New_Invoices_Page.jsx";
 
 function App() {
@@ -71,6 +72,7 @@ function App() {
           >
             <Route path="/home" element={<LandingPage />} />
             <Route path="/management" element={<AdminTools />} />
+            <Route path="/management/billings" element={<Billings />} />
             <Route path="/management/discounts" element={<Discounts />} />
             <Route path="/classes" element={<Classes />} />
             <Route path="/class-management" element={<ClassManagement />} />
