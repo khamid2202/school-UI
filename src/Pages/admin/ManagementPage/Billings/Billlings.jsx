@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo, useRef } from "react";
+import { Button } from "@heroui/react";
 import toast from "react-hot-toast";
 import { api } from "../../../../Library/RequestMaker";
 import { endpoints } from "../../../../Library/Endpoints";
@@ -21,6 +22,7 @@ function FilterSelect({
   options,
   onChange,
   placeholder = "All",
+  showPlaceholder = true,
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -39,9 +41,10 @@ function FilterSelect({
 
   return (
     <div className="relative" ref={ref}>
-      <button
-        type="button"
-        className="flex w-full items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 shadow-sm hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      <Button
+        variant="bordered"
+        radius="full"
+        className="flex w-full items-center justify-between border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 shadow-sm hover:border-gray-400 focus-visible:ring-2 focus-visible:ring-blue-500"
         onClick={(e) => {
           e.stopPropagation();
           setOpen((prev) => !prev);
@@ -60,28 +63,32 @@ function FilterSelect({
             clipRule="evenodd"
           />
         </svg>
-      </button>
+      </Button>
       {open && (
         <div className="absolute left-0 z-30 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg">
           <div className="max-h-56 overflow-auto py-1 text-sm text-gray-800">
-            <button
-              type="button"
-              className={`flex w-full items-center px-3 py-2 text-left hover:bg-gray-50 ${
-                value === "" ? "bg-gray-50 font-semibold" : ""
-              }`}
-              onClick={(e) => {
-                e.stopPropagation();
-                onChange("", placeholder);
-                setOpen(false);
-              }}
-            >
-              <span className="truncate">{placeholder}</span>
-            </button>
+            {showPlaceholder && (
+              <Button
+                variant="light"
+                radius="full"
+                className={`flex w-full justify-start px-3 py-2 text-left hover:bg-gray-50 ${
+                  value === "" ? "bg-gray-50 font-semibold" : ""
+                }`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onChange("", placeholder);
+                  setOpen(false);
+                }}
+              >
+                <span className="truncate">{placeholder}</span>
+              </Button>
+            )}
             {options.map((opt) => (
-              <button
+              <Button
                 key={opt.value}
-                type="button"
-                className={`flex w-full items-center px-3 py-2 text-left hover:bg-gray-50 ${
+                variant="light"
+                radius="full"
+                className={`flex w-full justify-start px-3 py-2 text-left hover:bg-gray-50 ${
                   value === opt.value ? "bg-gray-50 font-semibold" : ""
                 }`}
                 onClick={(e) => {
@@ -91,7 +98,116 @@ function FilterSelect({
                 }}
               >
                 <span className="truncate">{opt.label}</span>
-              </button>
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Free-text category input with suggestion list so users can add new categories
+function CategoryInput({
+  value,
+  options,
+  onChange,
+  placeholder = "Type a category",
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState(value || "");
+  const [hasTyped, setHasTyped] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    setQuery(value || "");
+    setHasTyped(false);
+  }, [value]);
+
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    window.addEventListener("click", handleClick);
+    return () => window.removeEventListener("click", handleClick);
+  }, []);
+
+  const filtered = useMemo(() => {
+    const search = hasTyped ? query.trim() : "";
+    if (!search) return options;
+    const q = search.toLowerCase();
+    return options.filter(
+      (opt) =>
+        opt.value.toLowerCase().includes(q) ||
+        opt.label.toLowerCase().includes(q),
+    );
+  }, [options, query, hasTyped]);
+
+  return (
+    <div className="relative" ref={ref}>
+      <div className="flex items-center rounded-full border border-gray-300 bg-white px-3  text-sm text-gray-800 shadow-sm hover:border-gray-400 focus-within:ring-2 focus-within:ring-blue-500">
+        <input
+          type="text"
+          value={query}
+          onFocus={() => setOpen(true)}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setHasTyped(true);
+            onChange(e.target.value);
+          }}
+          className="w-full bg-transparent text-gray-900 placeholder:text-gray-400 focus:outline-none"
+          placeholder={placeholder}
+          maxLength={50}
+        />
+        <Button
+          isIconOnly
+          variant="light"
+          radius="full"
+          className="text-gray-500 h-8 w-6 hover:bg-gray-100"
+          onClick={(e) => {
+            e.stopPropagation();
+            setOpen((prev) => !prev);
+          }}
+        >
+          <svg
+            className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`}
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              fillRule="evenodd"
+              d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"
+              clipRule="evenodd"
+            />
+          </svg>
+        </Button>
+      </div>
+
+      {open && filtered.length > 0 && (
+        <div className="absolute z-30 mt-2 w-full rounded-2xl border border-gray-200 bg-white shadow-xl">
+          <div className="max-h-56 overflow-auto py-2">
+            {filtered.map((opt) => (
+              <Button
+                key={opt.value}
+                variant="light"
+                radius="full"
+                className={`flex w-full justify-start px-3 py-2 text-left hover:bg-gray-50 ${
+                  opt.value === value ? "bg-blue-50 text-blue-700" : ""
+                }`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setQuery(opt.value);
+                  onChange(opt.value);
+                  setOpen(false);
+                }}
+              >
+                <div className="flex flex-col">
+                  <span className="text-sm font-semibold">{opt.value}</span>
+                </div>
+              </Button>
             ))}
           </div>
         </div>
@@ -218,6 +334,10 @@ function Billings() {
     }
     if (form.description.length > 300) {
       toast.error("Description must be 300 characters or less");
+      return;
+    }
+    if (form.amount === "") {
+      toast.error("Amount is required");
       return;
     }
     const amountNum = Number(form.amount);
@@ -404,18 +524,17 @@ function Billings() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Category <span className="text-red-500">*</span>
                 </label>
-                <select
-                  name="category"
+                <CategoryInput
                   value={form.category}
-                  onChange={handleChange}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {categoryOptions.map((cat) => (
-                    <option key={cat.value} value={cat.value}>
-                      {cat.label}
-                    </option>
-                  ))}
-                </select>
+                  options={categoryOptions}
+                  onChange={(val) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      category: val,
+                    }))
+                  }
+                  placeholder="Type or choose a category"
+                />
               </div>
 
               <div>
@@ -470,25 +589,27 @@ function Billings() {
               </div>
 
               <div className="flex gap-2">
-                <button
+                <Button
                   type="submit"
-                  disabled={submitting}
-                  className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50"
+                  isDisabled={submitting}
+                  radius="full"
+                  className="flex-1 bg-blue-600 text-white hover:bg-blue-700"
                 >
                   {submitting
                     ? "Saving..."
                     : editingId
                       ? "Update Billing"
                       : "Create Billing"}
-                </button>
+                </Button>
                 {editingId && (
-                  <button
-                    type="button"
+                  <Button
+                    variant="bordered"
                     onClick={resetForm}
-                    className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    radius="full"
+                    className="border-gray-200 text-gray-700 hover:bg-gray-50"
                   >
                     Cancel
-                  </button>
+                  </Button>
                 )}
               </div>
             </form>
@@ -600,22 +721,28 @@ function Billings() {
                             </span>
                           </td>
                           <td className="px-4 py-3 text-center">
-                            <button
+                            <Button
+                              size="sm"
+                              variant="flat"
                               onClick={() => handleToggleActive(billing)}
-                              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${
+                              radius="full"
+                              className={
                                 billing.is_active
-                                  ? "bg-green-50 text-green-700 hover:bg-green-100"
-                                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                              }`}
+                                  ? "bg-green-50 text-green-700"
+                                  : "bg-gray-100 text-gray-600"
+                              }
                             >
                               {billing.is_active ? "Active" : "Inactive"}
-                            </button>
+                            </Button>
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center justify-end gap-2">
-                              <button
+                              <Button
+                                isIconOnly
+                                variant="light"
                                 onClick={() => handleEdit(billing)}
-                                className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 hover:text-blue-600 transition-colors"
+                                radius="full"
+                                className="text-gray-500 hover:text-blue-600"
                                 title="Edit"
                               >
                                 <svg
@@ -631,10 +758,13 @@ function Billings() {
                                     d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
                                   />
                                 </svg>
-                              </button>
-                              <button
+                              </Button>
+                              <Button
+                                isIconOnly
+                                variant="light"
                                 onClick={() => handleDelete(billing)}
-                                className="rounded-lg p-1.5 text-gray-500 hover:bg-red-50 hover:text-red-600 transition-colors"
+                                radius="full"
+                                className="text-gray-500 hover:text-red-600"
                                 title="Delete"
                               >
                                 <svg
@@ -650,7 +780,7 @@ function Billings() {
                                     d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                                   />
                                 </svg>
-                              </button>
+                              </Button>
                             </div>
                           </td>
                         </tr>
